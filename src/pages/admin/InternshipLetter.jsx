@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Container,
@@ -15,6 +15,11 @@ import { sanitizeTextForStandardFonts } from '../../utils/pdfTextSanitizer';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../utils/api';
 
+const SIGNATORY_NAME = 'Sivagaminathan';
+const SIGNATORY_TITLE = 'Founder';
+const COMPANY_EMAIL = 'admin@urbancode.in';
+const COMPANY_PHONE = '+91 98787 98797';
+
 const InternshipLetter = () => {
   // simple form (no candidate lookup) to support students
   const [form, setForm] = useState({
@@ -29,7 +34,66 @@ const InternshipLetter = () => {
   });
   const [titleText, setTitleText] = useState('INTERNSHIP CERTIFICATE');
   const [letterDate, setLetterDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [body, setBody] = useState(`\n\nTo Whom It May Concern,\n\nThis is to certify that **{{studentName}}**{{#college}}{{ , of }}{{collegeName}}{{/college}}{{#reg}}{{ (Reg. No: {{registrationNumber}}) }}{{/reg}} has successfully completed an internship at **{{company}}** in the role of {{designation}} for a duration of {{duration}}, from **{{startDate}}** to **{{endDate}}**.\n\nDuring the internship period, {{studentName}} was actively involved in the assigned tasks and responsibilities. The intern demonstrated a positive attitude, professional conduct, and a strong willingness to learn and adapt. They showed commitment toward understanding practical concepts and contributed responsibly to the work assigned during the training period.\n\nThroughout the internship, {{studentName}} maintained discipline, punctuality, and effective communication, and worked well under guidance and supervision. Their performance and behavior during the internship period were found to be satisfactory.\n\nThis certificate is issued upon the request of {{studentName}} and may be used for academic, professional, or personal reference purposes.\n\nWe wish {{studentName}} every success in their future academic pursuits and professional career.\n\nSincerely,\nFounder\n**{{company}}**`);
+
+  const formatLongDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(`${dateStr}T12:00:00`);
+      if (Number.isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Builds the certificate body from the current fields. College/registration
+  // number are optional, so they're only stitched in when present, instead of
+  // relying on {{#section}}...{{/section}} tags (those were never expanded by
+  // replacePlaceholders and used to print literally on the certificate).
+  const defaultBody = (f) => {
+    const name = f.studentName || '';
+    const collegePart = f.collegeName ? `, of **${f.collegeName}**` : '';
+    const regPart = f.registrationNumber ? ` (Reg. No: **${f.registrationNumber}**)` : '';
+    const subject = name || 'the intern';
+
+    return `To Whom It May Concern,
+
+This is to certify that **${name}**${collegePart}${regPart} has successfully completed an internship at **${f.company || ''}** in the role of ${f.designation || 'Intern'} for a duration of ${f.duration || ''}, from **${formatLongDate(f.startDate)}** to **${formatLongDate(f.endDate)}**.
+
+During the internship period, ${subject} was actively involved in the assigned tasks and responsibilities. The intern demonstrated a positive attitude, professional conduct, and a strong willingness to learn and adapt, showing commitment toward understanding practical concepts and contributing responsibly to the work assigned during the training period.
+
+Throughout the internship, ${subject} maintained discipline, punctuality, and effective communication, and worked well under guidance and supervision. Their performance and behaviour during the internship period were found to be satisfactory.
+
+This certificate is issued upon the request of ${subject} and may be used for academic, professional, or personal reference purposes.
+
+We wish ${subject} every success in their future academic pursuits and professional career.
+
+Sincerely,
+For **${f.company || ''}**`;
+  };
+
+  const [body, setBody] = useState(defaultBody({
+    studentName: '', collegeName: '', registrationNumber: '', designation: 'Intern', company: '', duration: '', startDate: '', endDate: ''
+  }));
+  const lastAutoBodyRef = useRef(body);
+
+  // Keep the letter body in sync with the typed-in fields, unless the admin
+  // has manually edited the body text away from the auto-generated version.
+  useEffect(() => {
+    const next = defaultBody(form);
+    const previousAutoBody = lastAutoBodyRef.current;
+    setBody(prev => (prev === previousAutoBody ? next : prev));
+    lastAutoBodyRef.current = next;
+  }, [
+    form.studentName,
+    form.collegeName,
+    form.registrationNumber,
+    form.designation,
+    form.company,
+    form.duration,
+    form.startDate,
+    form.endDate
+  ]);
 
   const [pdfUrl, setPdfUrl] = useState(null);
   const [pdfBytesData, setPdfBytesData] = useState(null);
@@ -50,7 +114,7 @@ const InternshipLetter = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  // simple placeholder replace (supports optional fields by leaving tokens empty)
+  // simple placeholder replace, kept for admins who type {{tokens}} into a manually edited body
   const replacePlaceholders = (template, data) => {
     return template.replace(/{{\s*studentName\s*}}/gi, data.studentName || '')
       .replace(/{{\s*collegeName\s*}}/gi, data.collegeName || '')
@@ -58,8 +122,8 @@ const InternshipLetter = () => {
       .replace(/{{\s*designation\s*}}/gi, data.designation || '')
       .replace(/{{\s*company\s*}}/gi, data.company || '')
       .replace(/{{\s*duration\s*}}/gi, data.duration || '')
-      .replace(/{{\s*startDate\s*}}/gi, data.startDate || '')
-      .replace(/{{\s*endDate\s*}}/gi, data.endDate || '');
+      .replace(/{{\s*startDate\s*}}/gi, formatLongDate(data.startDate))
+      .replace(/{{\s*endDate\s*}}/gi, formatLongDate(data.endDate));
   };
 
   const generatePdf = async () => {
@@ -72,7 +136,7 @@ const InternshipLetter = () => {
 
       const [copiedFirst] = await pdfDoc.copyPages(srcPdf, [0]);
       pdfDoc.addPage(copiedFirst);
-      let page = pdfDoc.getPage(0);
+      const page = pdfDoc.getPage(0);
       const { width, height } = page.getSize();
 
       const margins = { top: 143, bottom: 146, left: 40, right: 10 };
@@ -81,11 +145,9 @@ const InternshipLetter = () => {
       let fontBold = fontRegular;
       try { fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); } catch (e) {}
 
-      const finalBody = sanitizeTextForStandardFonts(replacePlaceholders(body, form), [fontRegular, fontBold]);
-      const lines = finalBody.split('\n');
-  // Title/bold color (#2b2b2b) and body color (#858585)
-  const titleColor = rgb(53 / 255, 53 / 255, 53 / 255); // #2b2b2b
-  const bodyColor = rgb(60 / 255, 60 / 255, 60 / 255); // #858585
+      // Title/bold color (#2b2b2b) and body color (#858585)
+      const titleColor = rgb(53 / 255, 53 / 255, 53 / 255);
+      const bodyColor = rgb(60 / 255, 60 / 255, 60 / 255);
 
       const contentTop = height - margins.top;
       const contentWidth = width - margins.left - margins.right;
@@ -97,30 +159,40 @@ const InternshipLetter = () => {
       const dateWidth = fontBold.widthOfTextAtSize(dateStr, fontDateSize);
       const dateX = margins.left + (contentWidth - dateWidth);
       const dateY = contentTop - fontDateSize;
-  page.drawText(dateStr, { x: dateX, y: dateY, size: fontDateSize, font: fontBold, color: titleColor });
+      page.drawText(dateStr, { x: dateX, y: dateY, size: fontDateSize, font: fontBold, color: titleColor });
 
       const titleSize = 16;
       const titleWidth = fontBold.widthOfTextAtSize(titleText, titleSize);
       const titleX = margins.left + (contentWidth - titleWidth) / 2;
       const titleY = contentTop - titleSize - 6;
-  page.drawText(titleText, { x: titleX, y: titleY, size: titleSize, font: fontBold, color: titleColor });
+      page.drawText(titleText, { x: titleX, y: titleY, size: titleSize, font: fontBold, color: titleColor });
 
-      const fontSize = 12;
-      const lineHeight = fontSize + 4;
-      let cursorY = titleY - 14;
+      // body drawing — shrink font to whatever fits so the certificate never spills onto a second page
+      const letterSpacing = 0.2;
       const maxWidth = contentWidth;
+      const bodyStartY = titleY - 14;
+      const hasSignature = !!(signatureBytes && signatureFile);
+      // reserve room for the sign-off block, drawn separately below the wrapped body:
+      // "Sincerely," + signature + name + Founder + company + email + phone
+      const signOffReserve = hasSignature ? 175 : 115;
+      const maxBodyHeight = bodyStartY - margins.bottom - signOffReserve;
 
-      // letter spacing in points (adds small tracking between characters)
-      const letterSpacing = 0.5;
-      // width of a single space in the chosen font (used for wrapping)
-      const spaceWidth = fontRegular.widthOfTextAtSize(' ', fontSize) + letterSpacing;
-
-      const measureWord = (text, font) => {
-        if (!text) return 0;
-        return font.widthOfTextAtSize(text, fontSize) + letterSpacing * Math.max(0, text.length - 1);
+      const finalBodyFull = sanitizeTextForStandardFonts(replacePlaceholders(body, form), [fontRegular, fontBold]);
+      const stripSignOffFromBody = (text) => {
+        const lines = text.split('\n');
+        const signOffIndex = lines.findIndex((line) => /^\s*(\*\*)?sincerely,?(\*\*)?\s*$/i.test(line.trim()));
+        if (signOffIndex >= 0) return lines.slice(0, signOffIndex).join('\n').trimEnd();
+        return text;
       };
+      const finalBody = stripSignOffFromBody(finalBodyFull);
+      const sourceLines = finalBody.split('\n');
+
+      // **text** marks the important bits (name, dates, company) to be rendered bold
       const tokenizeLineForBold = (line) => {
-        const parts = []; const pattern = /\*\*(.+?)\*\*/g; let lastIndex = 0; let match;
+        const parts = [];
+        const pattern = /\*\*(.+?)\*\*/g;
+        let lastIndex = 0;
+        let match;
         while ((match = pattern.exec(line)) !== null) {
           if (match.index > lastIndex) parts.push({ text: line.slice(lastIndex, match.index), bold: false });
           parts.push({ text: match[1], bold: true });
@@ -130,70 +202,121 @@ const InternshipLetter = () => {
         return parts;
       };
 
-      for (const rawLine of lines) {
-        const segments = tokenizeLineForBold(rawLine);
-        const words = [];
-        segments.forEach(seg => seg.text.split(/\s+/).filter(Boolean).forEach(w => words.push({ text: w, bold: !!seg.bold })));
+      const buildLayout = (fontSize) => {
+        const lineHeight = fontSize + 2;
+        const paragraphGap = 4;
+        const spaceWidth = fontRegular.widthOfTextAtSize(' ', fontSize) + letterSpacing;
+        const measureWord = (text, font = fontRegular) => font.widthOfTextAtSize(text, fontSize) + letterSpacing * Math.max(0, text.length - 1);
 
-        let lineWords = []; let lineWidth = 0;
-        const flushLine = async () => {
-          if (lineWords.length === 0) return;
-          if (cursorY - lineHeight < margins.bottom) {
-            const [bg] = await pdfDoc.copyPages(srcPdf, [0]); pdfDoc.addPage(bg); page = pdfDoc.getPage(pdfDoc.getPageCount() - 1); cursorY = height - margins.top - fontSize;
-          }
-          let x = margins.left;
-          for (let i = 0; i < lineWords.length; i++) {
-            const wobj = lineWords[i];
-            const usedFont = wobj.bold ? fontBold : fontRegular;
-            // draw word character-by-character to apply letterSpacing
-            let cx = x;
-              for (let ci = 0; ci < wobj.text.length; ci++) {
-              const ch = wobj.text[ci];
-              const charColor = wobj.bold ? titleColor : bodyColor;
-              page.drawText(ch, { x: cx, y: cursorY, size: fontSize, font: usedFont, color: charColor });
-              const cw = usedFont.widthOfTextAtSize(ch, fontSize);
-              cx += cw + letterSpacing;
-            }
-            const w = measureWord(wobj.text, usedFont);
-            x += w; if (i !== lineWords.length - 1) x += spaceWidth;
-          }
-          cursorY -= lineHeight; lineWords = []; lineWidth = 0;
-        };
+        const items = [];
+        let totalHeight = 0;
 
-        for (let i = 0; i < words.length; i++) {
-          const wobj = words[i]; const usedFont = wobj.bold ? fontBold : fontRegular; const wordWidth = measureWord(wobj.text, usedFont);
-          const extra = lineWords.length > 0 ? spaceWidth : 0;
-          if (lineWidth + extra + wordWidth > maxWidth) await flushLine();
-          lineWords.push(wobj); lineWidth = lineWidth + (lineWords.length > 1 ? spaceWidth : 0) + wordWidth;
+        for (const rawLine of sourceLines) {
+          const words = [];
+          tokenizeLineForBold(rawLine).forEach((seg) => {
+            seg.text.split(/\s+/).filter(Boolean).forEach((w) => words.push({ text: w, bold: seg.bold }));
+          });
+          let lineWords = [];
+          let lineWidth = 0;
+
+          const pushLine = () => {
+            if (lineWords.length === 0) return;
+            items.push({ words: lineWords });
+            totalHeight += lineHeight;
+            lineWords = []; lineWidth = 0;
+          };
+
+          for (const w of words) {
+            const usedFont = w.bold ? fontBold : fontRegular;
+            const wWidth = measureWord(w.text, usedFont);
+            const extra = lineWords.length > 0 ? spaceWidth : 0;
+            if (lineWidth + extra + wWidth > maxWidth) pushLine();
+            lineWords.push(w);
+            lineWidth = lineWidth + (lineWords.length > 1 ? spaceWidth : 0) + wWidth;
+          }
+          pushLine();
+          items.push({ gap: paragraphGap });
+          totalHeight += paragraphGap;
         }
-        await flushLine(); cursorY -= lineHeight / 2;
+
+        return { items, totalHeight, lineHeight, fontSize, spaceWidth, measureWord };
+      };
+
+      let layout = buildLayout(12);
+      for (let size = 11.5; size >= 6.5 && layout.totalHeight > maxBodyHeight; size -= 0.5) {
+        layout = buildLayout(size);
       }
 
-      if (signatureBytes && signatureFile) {
+      let cursorY = bodyStartY;
+      for (const item of layout.items) {
+        if (item.gap !== undefined) { cursorY -= item.gap; continue; }
+        let x = margins.left;
+        for (let i = 0; i < item.words.length; i++) {
+          const w = item.words[i];
+          const usedFont = w.bold ? fontBold : fontRegular;
+          const usedColor = w.bold ? titleColor : bodyColor;
+          let cx = x;
+          for (let ci = 0; ci < w.text.length; ci++) {
+            const ch = w.text[ci];
+            page.drawText(ch, { x: cx, y: cursorY, size: layout.fontSize, font: usedFont, color: usedColor });
+            const cw = usedFont.widthOfTextAtSize(ch, layout.fontSize);
+            cx += cw + letterSpacing;
+          }
+          const wWidth = layout.measureWord(w.text, usedFont);
+          x += wWidth; if (i !== item.words.length - 1) x += layout.spaceWidth;
+        }
+        cursorY -= layout.lineHeight;
+      }
+
+      // Sign-off block, drawn right after the wrapped body: Sincerely -> Signature -> Name -> Founder -> Company -> Email -> Phone
+      let signY = cursorY - 4;
+      page.drawText('Sincerely,', { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
+      signY -= layout.lineHeight + 4;
+
+      if (hasSignature) {
         try {
           const sigUint8 = new Uint8Array(signatureBytes);
-          let embeddedSig = null; const mime = signatureFile.type || '';
-          if (mime.includes('png')) embeddedSig = await pdfDoc.embedPng(sigUint8); else embeddedSig = await pdfDoc.embedJpg(sigUint8);
-          const maxSigWidth = 150; const maxSigHeight = 80; const origW = embeddedSig.width || 1; const origH = embeddedSig.height || 1;
-          const scale = Math.min(1, maxSigWidth / origW, maxSigHeight / origH); const sigDims = embeddedSig.scale(scale);
+          const mime = signatureFile.type || '';
+          const embeddedSig = mime.includes('png') ? await pdfDoc.embedPng(sigUint8) : await pdfDoc.embedJpg(sigUint8);
+          const maxSigWidth = 120; const maxSigHeight = 48;
+          const origW = embeddedSig.width || 1; const origH = embeddedSig.height || 1;
+          const scale = Math.min(1, maxSigWidth / origW, maxSigHeight / origH);
+          const sigDims = embeddedSig.scale(scale);
 
-          // place signature where content ends (below cursorY)
-          let targetPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
-          let targetY = cursorY - lineHeight * 1.2;
-          if (targetY < margins.bottom) {
-            const [bg] = await pdfDoc.copyPages(srcPdf, [0]); pdfDoc.addPage(bg); targetPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1); const { height: newH } = targetPage.getSize(); targetY = newH - margins.top - lineHeight * 2;
-          }
-          const x = margins.left;
-          targetPage.drawImage(embeddedSig, { x, y: targetY, width: sigDims.width, height: sigDims.height });
-        } catch (sigErr) { console.error('Signature embed error', sigErr); }
+          page.drawImage(embeddedSig, { x: margins.left, y: signY - sigDims.height, width: sigDims.width, height: sigDims.height });
+          signY -= sigDims.height + 6;
+        } catch (sigErr) {
+          console.error('Signature embed error', sigErr);
+          signY -= layout.lineHeight + 6;
+        }
+      } else {
+        signY -= 6;
       }
 
-  await shrinkLetterheadPhoneIconOnAllPages(pdfDoc);
-  const pdfBytes = await pdfDoc.save();
-  setPdfBytesData(pdfBytes);
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-  setPdfUrl(URL.createObjectURL(blob));
-  } catch (err) { console.error('PDF generation error', err); Swal.fire({ icon: 'error', title: 'Failed', text: 'Failed to generate PDF. See console for details.' }); } finally { setGenerating(false); }
+      // Signatory name (bold), then designation, company, and contact details (normal weight)
+      page.drawText(SIGNATORY_NAME, { x: margins.left, y: signY, size: layout.fontSize, font: fontBold, color: titleColor });
+      signY -= layout.lineHeight;
+
+      page.drawText(SIGNATORY_TITLE, { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
+      signY -= layout.lineHeight;
+
+      const companyName = form.company?.trim() || '';
+      if (companyName) {
+        page.drawText(companyName, { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
+        signY -= layout.lineHeight;
+      }
+
+      page.drawText(COMPANY_EMAIL, { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
+      signY -= layout.lineHeight;
+
+      page.drawText(`Phone: ${COMPANY_PHONE}`, { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
+
+      await shrinkLetterheadPhoneIconOnAllPages(pdfDoc);
+      const pdfBytes = await pdfDoc.save();
+      setPdfBytesData(pdfBytes);
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      setPdfUrl(URL.createObjectURL(blob));
+    } catch (err) { console.error('PDF generation error', err); Swal.fire({ icon: 'error', title: 'Failed', text: 'Failed to generate PDF. See console for details.' }); } finally { setGenerating(false); }
   };
 
   const downloadPdf = () => {
@@ -233,7 +356,7 @@ const InternshipLetter = () => {
           <TextField label="Title" fullWidth sx={{ mb: 2 }} value={titleText} onChange={(e) => setTitleText(e.target.value)} />
           <TextField label="Letter Date" type="date" fullWidth sx={{ mb: 2 }} value={letterDate} onChange={(e) => setLetterDate(e.target.value)} InputLabelProps={{ shrink: true }} />
 
-          <TextField label="Letter Body" multiline minRows={6} fullWidth value={body} onChange={(e) => setBody(e.target.value)} sx={{ mb: 2 }} />
+          <TextField label="Letter Body" multiline minRows={8} fullWidth value={body} onChange={(e) => setBody(e.target.value)} sx={{ mb: 2 }} />
 
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Signature (upload PNG/JPG)</Typography>
