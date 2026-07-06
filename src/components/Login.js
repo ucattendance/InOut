@@ -78,9 +78,7 @@ function Login() {
     <div className="min-h-screen bg-[#f0f4ff] flex items-center justify-center p-6">
       <div className="w-full max-w-md bg-white/70 backdrop-blur-lg border border-[#e0ecff] rounded-3xl shadow-xl px-8 py-10">
         <div className="flex justify-center items-center gap-4 mb-6">
-          {/* <img src={urbancodeLogo} alt="UC" className="h-10" /> */}
-          <h1 className="text-2xl font-bold text-[#2c2e3e] tracking-wide">InOut</h1>
-          {/* <img src={jobzenterLogo} alt="JZ" className="h-10" /> */}
+          <img src="/inout-logo.png" alt="InOut" className="h-20" />
         </div>
 
         <div className="text-center mb-8">

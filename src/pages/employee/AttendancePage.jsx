@@ -16,9 +16,12 @@ import {
   FiCalendar,
   FiLogOut,
   FiX,
+  FiSun,
+  FiMoon,
 } from "react-icons/fi";
 
 import { API_ENDPOINTS } from "../../utils/api";
+import { useTheme } from "../../utils/useTheme";
 import ProfileHeader from "../../components/attendance/ProfileHeader";
 import DateStrip from "../../components/attendance/DateStrip";
 import AttendanceCards from "../../components/attendance/AttendanceCards";
@@ -32,6 +35,7 @@ function AttendancePage() {
   const navigate = useNavigate();
   const { userId } = useParams();
   const isSelf = !userId;
+  const { theme, toggleTheme } = useTheme();
 
   const [user, setUser] = useState({ name: "", position: "", company: "" });
   const [type, setType] = useState(null);
@@ -360,7 +364,17 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-lime-50 via-sky-50 to-pink-50 px-4 py-6 md:py-10 max-w-4xl mx-auto font-sans">
+    <div className="min-h-screen bg-gradient-to-tr from-lime-50 via-sky-50 to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 py-6 md:py-10 max-w-4xl mx-auto font-sans">
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 bg-white/70 dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm hover:bg-white dark:hover:bg-gray-700 transition leading-none"
+        >
+          {theme === "dark" ? <FiSun className="w-4 h-4 shrink-0" /> : <FiMoon className="w-4 h-4 shrink-0" />}
+          <span>{theme === "dark" ? "Light" : "Dark"}</span>
+        </button>
+      </div>
       <div >
         <ProfileHeader
           name={user.name}
@@ -369,18 +383,18 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
 
         /></div>
 
-      <div className="mt-4 mb-4 flex justify-around text-sm font-medium text-gray-700">
+      <div className="mt-4 mb-4 flex justify-around text-sm font-medium text-gray-700 dark:text-gray-300">
         <div className="flex items-center gap-1">
-          <FiCheckCircle className="text-green-600" /> Present: <span className="text-green-600">{presentDays}</span>
+          <FiCheckCircle className="text-green-600 dark:text-green-400" /> Present: <span className="text-green-600 dark:text-green-400">{presentDays}</span>
         </div>
         <div className="flex items-center gap-1">
-          <FiXCircle className="text-red-600" /> Leaves: <span className="text-red-600">{absentDays}</span>
+          <FiXCircle className="text-red-600 dark:text-red-400" /> Leaves: <span className="text-red-600 dark:text-red-400">{absentDays}</span>
         </div>
         <div className="flex items-center gap-1">
-          <FiClock className="text-yellow-600" /> Partial: <span className="text-yellow-600">{partialAttendanceDays}</span>
+          <FiClock className="text-yellow-600 dark:text-yellow-400" /> Partial: <span className="text-yellow-600 dark:text-yellow-400">{partialAttendanceDays}</span>
         </div>
         <div className="flex items-center gap-1">
-          <FiBarChart2 className="text-blue-600" /> Total: <span className="text-blue-600">{fullAttendanceDays}</span>
+          <FiBarChart2 className="text-blue-600 dark:text-blue-400" /> Total: <span className="text-blue-600 dark:text-blue-400">{fullAttendanceDays}</span>
         </div>
       </div>
 
@@ -421,9 +435,9 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
 
       {showCalendarModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg max-w-lg w-full relative">
+          <div className="bg-white dark:bg-gray-800 dark:text-gray-100 p-6 rounded-xl shadow-lg max-w-lg w-full relative">
             <button
-              className="absolute top-2 right-2 text-gray-500 text-2xl hover:text-black"
+              className="absolute top-2 right-2 text-gray-500 dark:text-gray-400 text-2xl hover:text-black dark:hover:text-white"
               onClick={() => setShowCalendarModal(false)}
             >
               <FiX />
@@ -497,8 +511,8 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                 return false;
               }}
             />
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold text-gray-700 mb-2">Selected Date: {selectedDate.toDateString()}</h3>
+            <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-2">Selected Date: {selectedDate.toDateString()}</h3>
               {(() => {
                 const key = selectedDate.toDateString();
                 const record = attendanceMap[key];
@@ -563,7 +577,7 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
       )}
 
       <div className="mt-8">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3">
           Today Attendance
         </h3>
         <AttendanceCards
@@ -596,7 +610,7 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
 
       {isCapturing && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm p-6 rounded-2xl shadow-2xl space-y-4 text-center">
+          <div className="bg-white dark:bg-gray-800 dark:text-gray-100 w-full max-w-sm p-6 rounded-2xl shadow-2xl space-y-4 text-center">
             {!image ? (
               <>
                 <CameraView ref={videoRef} />
@@ -624,17 +638,17 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                 />
                 {/* Optional comment input shown after capture */}
                 <div className="mt-3 text-left">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Comment (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment (optional)</label>
                   <textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     rows={3}
                     placeholder="Add a note about this attendance (e.g., reason for early leave, remote work, etc.)"
-                    className="w-full border rounded p-2 text-sm"
+                    className="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded p-2 text-sm"
                   />
                 </div>
                 {capturedTime && (
-                  <div className="text-sm text-gray-600 mt-2 space-y-1">
+                  <div className="text-sm text-gray-600 dark:text-gray-300 mt-2 space-y-1">
                     <p>
                       <span className="font-medium">Captured at:</span>{" "}
                       {capturedTime.toLocaleTimeString()} on{" "}

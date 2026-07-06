@@ -17,41 +17,42 @@ function AttendanceCards({ attendanceData = [], totalWorkingDays, remainingDays 
     return acc;
   }, {});
 
-  // Get latest date
-  const latestDate = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a))[0];
-  const latestEntries = grouped[latestDate] || [];
+  // This section is titled "Today Attendance", so only today's entries belong here —
+  // showing the most recent-ever record misled users into thinking a past check-in was today's.
+  const todayKey = new Date().toDateString();
+  const todayEntries = grouped[todayKey] || [];
 
-  const checkIn = latestEntries.find(entry => entry.type === 'check-in');
-  const checkOut = latestEntries.find(entry => entry.type === 'check-out');
+  const checkIn = todayEntries.find(entry => entry.type === 'check-in');
+  const checkOut = todayEntries.find(entry => entry.type === 'check-out');
 
   const cards = [
     {
       title: 'Check In',
       time: formatTime(checkIn?.timestamp),
       note: checkIn ? 'On Time' : 'Not Yet',
-      bgColor: 'bg-green-100', 
-      textColor: 'text-green-800',
+      bgColor: 'bg-green-100 dark:bg-green-900/40',
+      textColor: 'text-green-800 dark:text-green-300',
     },
     {
       title: 'Check Out',
       time: formatTime(checkOut?.timestamp),
       note: checkOut ? 'Go Home' : 'Not Yet',
-      bgColor: 'bg-blue-100',
-      textColor: 'text-blue-800',
+      bgColor: 'bg-blue-100 dark:bg-blue-900/40',
+      textColor: 'text-blue-800 dark:text-blue-300',
     },
     {
       title: 'Total Days',
       time: (totalWorkingDays ?? Object.keys(grouped).length).toString(),
       note: 'Working Days',
-      bgColor: 'bg-purple-100',
-      textColor: 'text-purple-800',
+      bgColor: 'bg-purple-100 dark:bg-purple-900/40',
+      textColor: 'text-purple-800 dark:text-purple-300',
     },
     {
       title: 'Remaining Days',
       time: (remainingDays ?? 0).toString(),
       note: 'This Month',
-      bgColor: 'bg-indigo-100',
-      textColor: 'text-indigo-800',
+      bgColor: 'bg-indigo-100 dark:bg-indigo-900/40',
+      textColor: 'text-indigo-800 dark:text-indigo-300',
     },
   ];
 
@@ -60,9 +61,9 @@ function AttendanceCards({ attendanceData = [], totalWorkingDays, remainingDays 
       {cards.map((card, index) => (
         <div
           key={index}
-          className={`${card.bgColor} p-4 rounded-xl shadow-md border border-gray-200`}
+          className={`${card.bgColor} p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700`}
         >
-          <p className="text-sm text-gray-700">{card.title}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{card.title}</p>
           <h4 className={`text-xl font-bold ${card.textColor}`}>{card.time}</h4>
           <p className={`text-xs font-medium ${card.textColor}`}>{card.note}</p>
         </div>

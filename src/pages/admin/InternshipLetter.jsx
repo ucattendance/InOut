@@ -4,76 +4,76 @@ import {
   Container,
   Typography,
   TextField,
-  Button,
-  CircularProgress
+  Button
 } from '@mui/material';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import Swal from 'sweetalert2';
 import letterheadUrl from '../../assets/letterhead.pdf';
 import { shrinkLetterheadPhoneIconOnAllPages } from '../../utils/letterheadFooter';
 import { sanitizeTextForStandardFonts } from '../../utils/pdfTextSanitizer';
-import axios from 'axios';
-import { API_ENDPOINTS } from '../../utils/api';
-
-const SIGNATORY_NAME = 'Sivagaminathan';
-const SIGNATORY_TITLE = 'Founder';
-const COMPANY_EMAIL = 'admin@urbancode.in';
-const COMPANY_PHONE = '+91 98787 98797';
 
 const InternshipLetter = () => {
   // simple form (no candidate lookup) to support students
   const [form, setForm] = useState({
+    salutation: 'Mr.',
     studentName: '',
     collegeName: '',
+    address: '',
     registrationNumber: '',
     designation: 'Intern',
     company: '',
     duration: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    subject: 'Certificate of internship completion',
+    directorName: 'Sivagaminathan chandran',
+    directorTitle: 'Founder'
   });
-  const [titleText, setTitleText] = useState('INTERNSHIP CERTIFICATE');
   const [letterDate, setLetterDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const formatLongDate = (dateStr) => {
+  const formatDate = (dateStr) => {
     if (!dateStr) return '';
     try {
       const d = new Date(`${dateStr}T12:00:00`);
       if (Number.isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      return d.toLocaleDateString('en-GB');
     } catch {
       return dateStr;
     }
   };
 
-  // Builds the certificate body from the current fields. College/registration
+  // Builds the certificate body from the current fields. College/address/registration
   // number are optional, so they're only stitched in when present, instead of
   // relying on {{#section}}...{{/section}} tags (those were never expanded by
   // replacePlaceholders and used to print literally on the certificate).
   const defaultBody = (f) => {
     const name = f.studentName || '';
+    const salutation = f.salutation ? `${f.salutation} ` : '';
     const collegePart = f.collegeName ? `, of **${f.collegeName}**` : '';
+    const addressPart = f.address ? `, ${f.address}` : '';
     const regPart = f.registrationNumber ? ` (Reg. No: **${f.registrationNumber}**)` : '';
     const subject = name || 'the intern';
 
-    return `To Whom It May Concern,
+    return `**To:**
+${salutation}${name}
 
-This is to certify that **${name}**${collegePart}${regPart} has successfully completed an internship at **${f.company || ''}** in the role of ${f.designation || 'Intern'} for a duration of ${f.duration || ''}, from **${formatLongDate(f.startDate)}** to **${formatLongDate(f.endDate)}**.
+**Subject:** ${f.subject || 'Certificate of internship completion'}
 
-During the internship period, ${subject} was actively involved in the assigned tasks and responsibilities. The intern demonstrated a positive attitude, professional conduct, and a strong willingness to learn and adapt, showing commitment toward understanding practical concepts and contributing responsibly to the work assigned during the training period.
+This is to certify that **${name}**${collegePart}${addressPart}${regPart} has successfully completed an internship at **${f.company || ''}** in the role of **${f.designation || 'Intern'}** for a duration of ${f.duration || ''}, from **${formatDate(f.startDate)}** to **${formatDate(f.endDate)}**.
 
-Throughout the internship, ${subject} maintained discipline, punctuality, and effective communication, and worked well under guidance and supervision. Their performance and behaviour during the internship period were found to be satisfactory.
+During the internship period, ${subject} was actively involved in the assigned tasks and responsibilities. The intern demonstrated a positive attitude, professional conduct, and a strong willingness to learn and adapt, showing sincere commitment toward understanding practical concepts and contributing responsibly to the work assigned during the training period.
 
-This certificate is issued upon the request of ${subject} and may be used for academic, professional, or personal reference purposes.
+Throughout the internship, ${subject} maintained discipline, punctuality, and effective communication, and worked well under guidance and supervision. Performance and behaviour during the internship period were found to be satisfactory.
+
+This certificate is issued for ${subject} based only on their performance and may be used for academic, professional, or personal reference purposes.
 
 We wish ${subject} every success in their future academic pursuits and professional career.
 
-Sincerely,
-For **${f.company || ''}**`;
+Sincerely,`;
   };
 
   const [body, setBody] = useState(defaultBody({
-    studentName: '', collegeName: '', registrationNumber: '', designation: 'Intern', company: '', duration: '', startDate: '', endDate: ''
+    salutation: 'Mr.', studentName: '', collegeName: '', address: '', registrationNumber: '', designation: 'Intern', company: '', duration: '', startDate: '', endDate: '', subject: 'Certificate of internship completion'
   }));
   const lastAutoBodyRef = useRef(body);
 
@@ -85,14 +85,17 @@ For **${f.company || ''}**`;
     setBody(prev => (prev === previousAutoBody ? next : prev));
     lastAutoBodyRef.current = next;
   }, [
+    form.salutation,
     form.studentName,
     form.collegeName,
+    form.address,
     form.registrationNumber,
     form.designation,
     form.company,
     form.duration,
     form.startDate,
-    form.endDate
+    form.endDate,
+    form.subject
   ]);
 
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -101,6 +104,9 @@ For **${f.company || ''}**`;
   const [signatureFile, setSignatureFile] = useState(null);
   const [signatureBytes, setSignatureBytes] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
+  const [sealFile, setSealFile] = useState(null);
+  const [sealBytes, setSealBytes] = useState(null);
+  const [sealPreview, setSealPreview] = useState(null);
 
   const handleChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -114,16 +120,29 @@ For **${f.company || ''}**`;
     reader.readAsArrayBuffer(file);
   };
 
+  const handleSealUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setSealFile(file);
+    setSealPreview(URL.createObjectURL(file));
+    const reader = new FileReader();
+    reader.onload = () => setSealBytes(reader.result);
+    reader.readAsArrayBuffer(file);
+  };
+
   // simple placeholder replace, kept for admins who type {{tokens}} into a manually edited body
   const replacePlaceholders = (template, data) => {
-    return template.replace(/{{\s*studentName\s*}}/gi, data.studentName || '')
+    return template.replace(/{{\s*salutation\s*}}/gi, data.salutation || '')
+      .replace(/{{\s*studentName\s*}}/gi, data.studentName || '')
       .replace(/{{\s*collegeName\s*}}/gi, data.collegeName || '')
+      .replace(/{{\s*address\s*}}/gi, data.address || '')
       .replace(/{{\s*registrationNumber\s*}}/gi, data.registrationNumber || '')
       .replace(/{{\s*designation\s*}}/gi, data.designation || '')
       .replace(/{{\s*company\s*}}/gi, data.company || '')
       .replace(/{{\s*duration\s*}}/gi, data.duration || '')
-      .replace(/{{\s*startDate\s*}}/gi, formatLongDate(data.startDate))
-      .replace(/{{\s*endDate\s*}}/gi, formatLongDate(data.endDate));
+      .replace(/{{\s*subject\s*}}/gi, data.subject || '')
+      .replace(/{{\s*startDate\s*}}/gi, formatDate(data.startDate))
+      .replace(/{{\s*endDate\s*}}/gi, formatDate(data.endDate));
   };
 
   const generatePdf = async () => {
@@ -139,7 +158,7 @@ For **${f.company || ''}**`;
       const page = pdfDoc.getPage(0);
       const { width, height } = page.getSize();
 
-      const margins = { top: 143, bottom: 146, left: 40, right: 10 };
+      const margins = { top: 154, bottom: 146, left: 40, right: 40 };
 
       const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
       let fontBold = fontRegular;
@@ -152,29 +171,24 @@ For **${f.company || ''}**`;
       const contentTop = height - margins.top;
       const contentWidth = width - margins.left - margins.right;
 
-      // date and title inside margins
+      // date, right-aligned, no big centered title — the letter opens with To:/Subject: instead
       const fontDateSize = 10;
       let dateStr = '';
-      try { dateStr = letterDate ? new Date(letterDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-GB'); } catch (e) { dateStr = new Date().toLocaleDateString('en-GB'); }
+      try { dateStr = letterDate ? `Date: ${new Date(letterDate).toLocaleDateString('en-GB')}` : `Date: ${new Date().toLocaleDateString('en-GB')}`; } catch (e) { dateStr = `Date: ${new Date().toLocaleDateString('en-GB')}`; }
       const dateWidth = fontBold.widthOfTextAtSize(dateStr, fontDateSize);
       const dateX = margins.left + (contentWidth - dateWidth);
       const dateY = contentTop - fontDateSize;
       page.drawText(dateStr, { x: dateX, y: dateY, size: fontDateSize, font: fontBold, color: titleColor });
 
-      const titleSize = 16;
-      const titleWidth = fontBold.widthOfTextAtSize(titleText, titleSize);
-      const titleX = margins.left + (contentWidth - titleWidth) / 2;
-      const titleY = contentTop - titleSize - 6;
-      page.drawText(titleText, { x: titleX, y: titleY, size: titleSize, font: fontBold, color: titleColor });
-
       // body drawing — shrink font to whatever fits so the certificate never spills onto a second page
       const letterSpacing = 0.2;
       const maxWidth = contentWidth;
-      const bodyStartY = titleY - 14;
+      const bodyStartY = dateY - 26;
       const hasSignature = !!(signatureBytes && signatureFile);
+      const hasSeal = !!(sealBytes && sealFile);
       // reserve room for the sign-off block, drawn separately below the wrapped body:
-      // "Sincerely," + signature + name + Founder + company + email + phone
-      const signOffReserve = hasSignature ? 175 : 115;
+      // "Sincerely," + seal + signature + name + Founder
+      const signOffReserve = 60 + (hasSeal ? 100 : 0) + (hasSignature ? 55 : 0);
       const maxBodyHeight = bodyStartY - margins.bottom - signOffReserve;
 
       const finalBodyFull = sanitizeTextForStandardFonts(replacePlaceholders(body, form), [fontRegular, fontBold]);
@@ -268,10 +282,27 @@ For **${f.company || ''}**`;
         cursorY -= layout.lineHeight;
       }
 
-      // Sign-off block, drawn right after the wrapped body: Sincerely -> Signature -> Name -> Founder -> Company -> Email -> Phone
+      // Sign-off block, drawn right after the wrapped body: Sincerely -> Seal -> Signature -> Name -> Founder
       let signY = cursorY - 4;
       page.drawText('Sincerely,', { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
       signY -= layout.lineHeight + 4;
+
+      if (hasSeal) {
+        try {
+          const sealUint8 = new Uint8Array(sealBytes);
+          const mime = sealFile.type || '';
+          const embeddedSeal = mime.includes('png') ? await pdfDoc.embedPng(sealUint8) : await pdfDoc.embedJpg(sealUint8);
+          const maxSealWidth = 100; const maxSealHeight = 100;
+          const origW = embeddedSeal.width || 1; const origH = embeddedSeal.height || 1;
+          const scale = Math.min(1, maxSealWidth / origW, maxSealHeight / origH);
+          const sealDims = embeddedSeal.scale(scale);
+
+          page.drawImage(embeddedSeal, { x: margins.left, y: signY - sealDims.height, width: sealDims.width, height: sealDims.height });
+          signY -= sealDims.height + 4;
+        } catch (sealErr) {
+          console.error('Seal embed error', sealErr);
+        }
+      }
 
       if (hasSignature) {
         try {
@@ -293,23 +324,11 @@ For **${f.company || ''}**`;
         signY -= 6;
       }
 
-      // Signatory name (bold), then designation, company, and contact details (normal weight)
-      page.drawText(SIGNATORY_NAME, { x: margins.left, y: signY, size: layout.fontSize, font: fontBold, color: titleColor });
+      // Signatory name (bold), then designation (normal weight) — no company/email/phone, the letterhead footer already carries those
+      page.drawText(form.directorName || '', { x: margins.left, y: signY, size: layout.fontSize, font: fontBold, color: titleColor });
       signY -= layout.lineHeight;
 
-      page.drawText(SIGNATORY_TITLE, { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
-      signY -= layout.lineHeight;
-
-      const companyName = form.company?.trim() || '';
-      if (companyName) {
-        page.drawText(companyName, { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
-        signY -= layout.lineHeight;
-      }
-
-      page.drawText(COMPANY_EMAIL, { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
-      signY -= layout.lineHeight;
-
-      page.drawText(`Phone: ${COMPANY_PHONE}`, { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
+      page.drawText(form.directorTitle || '', { x: margins.left, y: signY, size: layout.fontSize, font: fontRegular, color: bodyColor });
 
       await shrinkLetterheadPhoneIconOnAllPages(pdfDoc);
       const pdfBytes = await pdfDoc.save();
@@ -344,8 +363,10 @@ For **${f.company || ''}**`;
       <Typography variant="h5" sx={{ mb: 2 }}>Internship Certificate</Typography>
       <Box sx={{ display: 'flex', gap: 4 }}>
         <Box sx={{ flex: 1 }}>
+          <TextField label="Salutation (Mr./Ms./Dr.)" fullWidth sx={{ mb: 2 }} value={form.salutation} onChange={(e) => handleChange('salutation', e.target.value)} />
           <TextField label="Student Name" fullWidth sx={{ mb: 2 }} value={form.studentName} onChange={(e) => handleChange('studentName', e.target.value)} />
           <TextField label="College Name (optional)" fullWidth sx={{ mb: 2 }} value={form.collegeName} onChange={(e) => handleChange('collegeName', e.target.value)} />
+          <TextField label="Address (optional)" fullWidth sx={{ mb: 2 }} value={form.address} onChange={(e) => handleChange('address', e.target.value)} />
           <TextField label="Registration Number (optional)" fullWidth sx={{ mb: 2 }} value={form.registrationNumber} onChange={(e) => handleChange('registrationNumber', e.target.value)} />
           <TextField label="Designation / Role" fullWidth sx={{ mb: 2 }} value={form.designation} onChange={(e) => handleChange('designation', e.target.value)} />
           <TextField label="Company" fullWidth sx={{ mb: 2 }} value={form.company} onChange={(e) => handleChange('company', e.target.value)} />
@@ -353,15 +374,24 @@ For **${f.company || ''}**`;
           <TextField label="Start Date" type="date" fullWidth sx={{ mb: 2 }} value={form.startDate} onChange={(e) => handleChange('startDate', e.target.value)} InputLabelProps={{ shrink: true }} />
           <TextField label="End Date" type="date" fullWidth sx={{ mb: 2 }} value={form.endDate} onChange={(e) => handleChange('endDate', e.target.value)} InputLabelProps={{ shrink: true }} />
 
-          <TextField label="Title" fullWidth sx={{ mb: 2 }} value={titleText} onChange={(e) => setTitleText(e.target.value)} />
+          <TextField label="Subject" fullWidth sx={{ mb: 2 }} value={form.subject} onChange={(e) => handleChange('subject', e.target.value)} />
           <TextField label="Letter Date" type="date" fullWidth sx={{ mb: 2 }} value={letterDate} onChange={(e) => setLetterDate(e.target.value)} InputLabelProps={{ shrink: true }} />
 
-          <TextField label="Letter Body" multiline minRows={8} fullWidth value={body} onChange={(e) => setBody(e.target.value)} sx={{ mb: 2 }} />
+          <TextField label="Director Name" fullWidth sx={{ mb: 2 }} value={form.directorName} onChange={(e) => handleChange('directorName', e.target.value)} />
+          <TextField label="Director Title" fullWidth sx={{ mb: 2 }} value={form.directorTitle} onChange={(e) => handleChange('directorTitle', e.target.value)} />
+
+          <TextField label="Letter Body" multiline minRows={8} fullWidth value={body} onChange={(e) => setBody(e.target.value)} sx={{ mb: 2 }} helperText="Add an extra paragraph here manually (e.g. a full-time job offer) for candidates who need one." />
 
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Signature (upload PNG/JPG)</Typography>
             <input type="file" accept="image/*" onChange={handleSignatureUpload} />
             {signaturePreview && (<Box sx={{ mt: 1 }}><img src={signaturePreview} alt="signature preview" style={{ maxWidth: 200, maxHeight: 80 }} /></Box>)}
+          </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Company Seal (upload PNG/JPG)</Typography>
+            <input type="file" accept="image/*" onChange={handleSealUpload} />
+            {sealPreview && (<Box sx={{ mt: 1 }}><img src={sealPreview} alt="seal preview" style={{ maxWidth: 120, maxHeight: 120 }} /></Box>)}
           </Box>
 
           <Box sx={{ display: 'flex', gap: 2 }}>

@@ -24,8 +24,8 @@ function DateStrip({ selectedDate, setSelectedDate }) {
           onClick={() => setSelectedDate(d.date)}
           className={`flex flex-col items-center justify-center px-3 py-2 rounded-lg border shadow-sm min-w-[55px] transition-all
             ${d.isSelected
-              ? 'bg-blue-50 border-blue-500 text-blue-700 font-semibold'
-              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+              ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-500 text-blue-700 dark:text-blue-300 font-semibold'
+              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
         >
           <span className="text-base">{d.day}</span>
           <span className="text-xs font-medium">{d.label}</span>

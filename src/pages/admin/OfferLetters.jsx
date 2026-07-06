@@ -767,9 +767,6 @@ const OfferLetters = () => {
               <Button variant="outlined" onClick={downloadPdf} disabled={!pdfUrl}>Download PDF</Button>
               <Button variant="outlined" onClick={printPdf} disabled={!pdfUrl}>Print</Button>
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              Print panna &quot;Print&quot; button use pannunga — browser Ctrl+P preview maathram print aagum.
-            </Typography>
 
             {selected && (candidates.find(c => c._id === selected)?.letterCopies || []).length > 0 && (
               <Box sx={{ mt: 2 }}>

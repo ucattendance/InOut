@@ -74,7 +74,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     <>
       <aside className={`admin-sidebar ${isOpen ? 'is-open' : ''}`}>
         <div className="admin-sidebar-brand">
-          INOUT HR Portal
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/inout-logo.png" alt="INOUT logo" style={{ height: 60, width: 'auto' }} />
+          </div>
           <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 500, opacity: 0.75, marginTop: 2 }}>
             {APP_BUILD}
           </span>

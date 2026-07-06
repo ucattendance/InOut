@@ -1,7 +1,7 @@
 import React from 'react';
 import {  Routes, Route } from 'react-router-dom';
 
-// Savitha Admnin Dashboard
+//  Admnin Dashboard
 import DashSavi from './pages/Dashboard';
 
 // Public Pages

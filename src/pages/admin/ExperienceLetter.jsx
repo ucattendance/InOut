@@ -30,7 +30,7 @@ const ExperienceLetter = () => {
   const [form, setForm] = useState({ candidateName: '', designation: '', company: '', joiningDate: '', relievingDate: '' });
   const [titleText, setTitleText] = useState('EXPERIENCE LETTER');
   const [letterDate, setLetterDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [body, setBody] = useState(`\n\nTo Whom It May Concern,\n\nThis is to certify that **{{name}}** was employed with **{{company}}** in the capacity of {{designation}} from **{{joiningDate}}** to **{{relievingDate}}**.\n\nDuring the course of their employment, {{name}} was responsible for carrying out assigned duties and responsibilities with dedication and sincerity. They demonstrated a good level of professional competence, discipline, and commitment toward their work. Their conduct throughout the tenure was found to be professional and in accordance with the company's policies and standards.\n\n{{name}} maintained cordial relationships with colleagues, supervisors, and clients, and contributed positively to the work environment. We found them to be reliable and cooperative in performing their assigned tasks and responsibilities.\n\nThis certificate is being issued upon the request of {{name}} for whatever purpose it may serve. We confirm that {{name}} has been relieved from their duties with **{{company}}** as of **{{relievingDate}}**.\n\nWe wish {{name}} every success in their future career and personal endeavors.\n\nSincerely,\nFounder\n**{{company}}**`);
+  const [body, setBody] = useState(`\n\nTo Whom It May Concern,\n\nThis is to certify that **{{name}}** was employed with **{{company}}** in the capacity of {{designation}} from **{{joiningDate}}** to **{{relievingDate}}**.\n\nDuring the course of their internship, {{name}} was responsible for carrying out assigned duties and responsibilities with dedication and sincerity. They demonstrated a good level of professional competence, discipline, and commitment toward their work. Their conduct throughout the tenure was found to be professional and in accordance with the company's policies and standards.\n\n{{name}} maintained cordial relationships with colleagues, supervisors, and clients, and contributed positively to the work environment. We found them to be reliable and cooperative in performing their assigned tasks and responsibilities.\n\nThis certificate is being issued upon the request of {{name}} for whatever purpose it may serve. We confirm that {{name}} has been relieved from their duties with **{{company}}** as of **{{relievingDate}}**.\n\nWe wish {{name}} every success in their future career and personal endeavors.\n\n**Sivagaminathan C**\nFounder & Director\n**{{company}}**`);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [pdfBytesData, setPdfBytesData] = useState(null);
   const [generating, setGenerating] = useState(false);
@@ -100,7 +100,10 @@ const ExperienceLetter = () => {
       try { fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); } catch (e) {}
 
       const finalBody = sanitizeTextForStandardFonts(replacePlaceholders(body, form), [fontRegular, fontBold]);
-      const lines = finalBody.split('\n');
+      const allLines = finalBody.split('\n');
+      const signOffMarkerIndex = allLines.findIndex(l => l.trim() === '**Sivagaminathan C**');
+      const lines = signOffMarkerIndex >= 0 ? allLines.slice(0, signOffMarkerIndex) : allLines;
+      const signOffLines = signOffMarkerIndex >= 0 ? allLines.slice(signOffMarkerIndex) : [];
   // Title/bold and body color (match OfferLetters)
   const titleColor = rgb(53 / 255, 53 / 255, 53 / 255);
   const bodyColor = rgb(60 / 255, 60 / 255, 60 / 255);
@@ -146,64 +149,69 @@ const ExperienceLetter = () => {
         return parts;
       };
 
-      for (const rawLine of lines) {
-        const segments = tokenizeLineForBold(rawLine);
-        const words = [];
-        segments.forEach(seg => seg.text.split(/\s+/).filter(Boolean).forEach(w => words.push({ text: w, bold: !!seg.bold })));
+      const drawParagraphLines = async (paragraphLines) => {
+        for (const rawLine of paragraphLines) {
+          const segments = tokenizeLineForBold(rawLine);
+          const words = [];
+          segments.forEach(seg => seg.text.split(/\s+/).filter(Boolean).forEach(w => words.push({ text: w, bold: !!seg.bold })));
 
-        let lineWords = []; let lineWidth = 0;
-        const flushLine = async () => {
-          if (lineWords.length === 0) return;
-          if (cursorY - lineHeight < margins.bottom) {
-            const [bg] = await pdfDoc.copyPages(srcPdf, [0]); pdfDoc.addPage(bg); page = pdfDoc.getPage(pdfDoc.getPageCount() - 1); cursorY = height - margins.top - fontSize;
-          }
-          let x = margins.left;
-          for (let i = 0; i < lineWords.length; i++) {
-            const wobj = lineWords[i];
-            const usedFont = wobj.bold ? fontBold : fontRegular;
-            // draw word character-by-character to apply letterSpacing
-            let cx = x;
-              for (let ci = 0; ci < wobj.text.length; ci++) {
-              const ch = wobj.text[ci];
-              const charColor = wobj.bold ? titleColor : bodyColor;
-              page.drawText(ch, { x: cx, y: cursorY, size: fontSize, font: usedFont, color: charColor });
-              const cw = usedFont.widthOfTextAtSize(ch, fontSize);
-              cx += cw + letterSpacing;
+          let lineWords = []; let lineWidth = 0;
+          const flushLine = async () => {
+            if (lineWords.length === 0) return;
+            if (cursorY - lineHeight < margins.bottom) {
+              const [bg] = await pdfDoc.copyPages(srcPdf, [0]); pdfDoc.addPage(bg); page = pdfDoc.getPage(pdfDoc.getPageCount() - 1); cursorY = height - margins.top - fontSize;
             }
-            const w = measureWord(wobj.text, usedFont);
-            x += w; if (i !== lineWords.length - 1) x += spaceWidth;
-          }
-          cursorY -= lineHeight; lineWords = []; lineWidth = 0;
-        };
+            let x = margins.left;
+            for (let i = 0; i < lineWords.length; i++) {
+              const wobj = lineWords[i];
+              const usedFont = wobj.bold ? fontBold : fontRegular;
+              // draw word character-by-character to apply letterSpacing
+              let cx = x;
+                for (let ci = 0; ci < wobj.text.length; ci++) {
+                const ch = wobj.text[ci];
+                const charColor = wobj.bold ? titleColor : bodyColor;
+                page.drawText(ch, { x: cx, y: cursorY, size: fontSize, font: usedFont, color: charColor });
+                const cw = usedFont.widthOfTextAtSize(ch, fontSize);
+                cx += cw + letterSpacing;
+              }
+              const w = measureWord(wobj.text, usedFont);
+              x += w; if (i !== lineWords.length - 1) x += spaceWidth;
+            }
+            cursorY -= lineHeight; lineWords = []; lineWidth = 0;
+          };
 
-        for (let i = 0; i < words.length; i++) {
-          const wobj = words[i]; const usedFont = wobj.bold ? fontBold : fontRegular; const wordWidth = measureWord(wobj.text, usedFont);
-          const extra = lineWords.length > 0 ? spaceWidth : 0;
-          if (lineWidth + extra + wordWidth > maxWidth) await flushLine();
-          lineWords.push(wobj); lineWidth = lineWidth + (lineWords.length > 1 ? spaceWidth : 0) + wordWidth;
+          for (let i = 0; i < words.length; i++) {
+            const wobj = words[i]; const usedFont = wobj.bold ? fontBold : fontRegular; const wordWidth = measureWord(wobj.text, usedFont);
+            const extra = lineWords.length > 0 ? spaceWidth : 0;
+            if (lineWidth + extra + wordWidth > maxWidth) await flushLine();
+            lineWords.push(wobj); lineWidth = lineWidth + (lineWords.length > 1 ? spaceWidth : 0) + wordWidth;
+          }
+          await flushLine(); cursorY -= lineHeight / 2;
         }
-        await flushLine(); cursorY -= lineHeight / 2;
+      };
+
+      await drawParagraphLines(lines);
+
+      if (signatureBytes && signatureFile) {
+        try {
+          const sigUint8 = new Uint8Array(signatureBytes);
+          let embeddedSig = null; const mime = signatureFile.type || '';
+          if (mime.includes('png')) embeddedSig = await pdfDoc.embedPng(sigUint8); else embeddedSig = await pdfDoc.embedJpg(sigUint8);
+          const maxSigWidth = 150; const maxSigHeight = 80; const origW = embeddedSig.width || 1; const origH = embeddedSig.height || 1;
+          const scale = Math.min(1, maxSigWidth / origW, maxSigHeight / origH); const sigDims = embeddedSig.scale(scale);
+
+          // place signature where the body content ends, before the sign-off block
+          let targetY = cursorY - lineHeight * 0.4;
+          if (targetY - sigDims.height < margins.bottom) {
+            const [bg] = await pdfDoc.copyPages(srcPdf, [0]); pdfDoc.addPage(bg); page = pdfDoc.getPage(pdfDoc.getPageCount() - 1); targetY = height - margins.top - fontSize;
+          }
+          const x = margins.left;
+          page.drawImage(embeddedSig, { x, y: targetY - sigDims.height, width: sigDims.width, height: sigDims.height });
+          cursorY = targetY - sigDims.height - lineHeight * 0.3;
+        } catch (sigErr) { console.error('Signature embed error', sigErr); }
       }
 
-      
-        if (signatureBytes && signatureFile) {
-          try {
-            const sigUint8 = new Uint8Array(signatureBytes);
-            let embeddedSig = null; const mime = signatureFile.type || '';
-            if (mime.includes('png')) embeddedSig = await pdfDoc.embedPng(sigUint8); else embeddedSig = await pdfDoc.embedJpg(sigUint8);
-            const maxSigWidth = 150; const maxSigHeight = 80; const origW = embeddedSig.width || 1; const origH = embeddedSig.height || 1;
-            const scale = Math.min(1, maxSigWidth / origW, maxSigHeight / origH); const sigDims = embeddedSig.scale(scale);
-
-            // place signature where content ends (below cursorY)
-            let targetPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
-            let targetY = cursorY - lineHeight * 1.2;
-            if (targetY < margins.bottom) {
-              const [bg] = await pdfDoc.copyPages(srcPdf, [0]); pdfDoc.addPage(bg); targetPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1); const { height: newH } = targetPage.getSize(); targetY = newH - margins.top - lineHeight * 2;
-            }
-            const x = margins.left;
-            targetPage.drawImage(embeddedSig, { x, y: targetY, width: sigDims.width, height: sigDims.height });
-          } catch (sigErr) { console.error('Signature embed error', sigErr); }
-        }
+      await drawParagraphLines(signOffLines);
 
   await shrinkLetterheadPhoneIconOnAllPages(pdfDoc);
   const pdfBytes = await pdfDoc.save();
