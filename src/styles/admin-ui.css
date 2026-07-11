@@ -70,11 +70,11 @@
 .uc-stat-green .uc-stat-value { color: #14532d; }
 
 .uc-stat-blue {
-  background: #dbeafe;
-  border-color: #3b82f6;
+  background: #e6f5f3;
+  border-color: #159C8E;
 }
-.uc-stat-blue .uc-stat-label { color: #1d4ed8; }
-.uc-stat-blue .uc-stat-value { color: #1e3a8a; }
+.uc-stat-blue .uc-stat-label { color: #0F7A6E; }
+.uc-stat-blue .uc-stat-value { color: #0b5c53; }
 
 .uc-stat-red {
   background: #fee2e2;
@@ -171,12 +171,12 @@
 }
 
 .uc-btn-primary {
-  background: #3b82f6;
+  background: #159C8E;
   color: #fff;
 }
 
 .uc-btn-primary:hover {
-  background: #1d4ed8;
+  background: #0F7A6E;
 }
 
 .uc-btn-icon-circle {
@@ -268,7 +268,7 @@
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: #3b82f6;
+  background: #159C8E;
   color: #fff;
 }
 
@@ -543,7 +543,7 @@
 }
 
 .uc-text-green { color: #16a34a; }
-.uc-text-blue { color: #2563eb; }
+.uc-text-blue { color: #159C8E; }
 .uc-text-red { color: #dc2626; }
 
 .uc-modal-backdrop {

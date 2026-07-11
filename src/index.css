@@ -13,3 +13,86 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* react-toastify brand theming */
+.Toastify__toast--success {
+  background: #159C8E;
+  color: #fff;
+}
+.Toastify__toast--success .Toastify__progress-bar {
+  background: #0F7A6E;
+}
+.Toastify__close-button--success {
+  color: #fff;
+  opacity: 0.8;
+}
+
+/* Interactive confirm/prompt toasts (src/utils/interactiveToast.jsx) */
+.ct-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ct-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.ct-text {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.ct-label {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+.ct-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.ct-input:focus {
+  outline: none;
+  border-color: #159C8E;
+  box-shadow: 0 0 0 2px rgba(21, 156, 142, 0.2);
+}
+.ct-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ct-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+.ct-tone-default {
+  background: #6b7280;
+}
+.ct-tone-primary {
+  background: #159C8E;
+}
+.ct-tone-primary:hover {
+  background: #0F7A6E;
+}
+.ct-tone-success {
+  background: #16a34a;
+}
+.ct-tone-success:hover {
+  background: #15803d;
+}
+.ct-tone-danger {
+  background: #dc2626;
+}
+.ct-tone-danger:hover {
+  background: #b91c1c;
+}

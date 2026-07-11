@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
+import { confirmToast } from '../../utils/interactiveToast';
 import { API_ENDPOINTS } from '../../utils/api';
 import { FiUserCheck, FiUserX, FiUserPlus } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
@@ -20,57 +21,53 @@ const PendingUsers = () => {
       setPendingUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Error fetching pending users:', err);
-      Swal.fire('Error', 'Failed to load pending users.', 'error');
+      toast.error('Error: Failed to load pending users.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = async (id) => {
-    const confirm = await Swal.fire({
+    const confirmed = await confirmToast({
       title: 'Approve this user?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Approve',
-      confirmButtonColor: '#38a169',
+      confirmText: 'Yes, Approve',
+      tone: 'success',
     });
 
-    if (!confirm.isConfirmed) return;
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem('token');
       await axios.post(`${API_ENDPOINTS.approveUser}/${id}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      Swal.fire('Success', 'User approved and moved to employees.', 'success');
+      toast.success('Success: User approved and moved to employees.');
       fetchPendingUsers();
     } catch (err) {
       console.error('Approval failed:', err);
-      Swal.fire('Error', 'Failed to approve user.', 'error');
+      toast.error('Error: Failed to approve user.');
     }
   };
 
   const handleReject = async (id) => {
-    const confirm = await Swal.fire({
+    const confirmed = await confirmToast({
       title: 'Reject this user?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Reject',
-      confirmButtonColor: '#e53e3e',
+      confirmText: 'Yes, Reject',
+      tone: 'danger',
     });
 
-    if (!confirm.isConfirmed) return;
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`${API_ENDPOINTS.rejectUser}/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      Swal.fire('Rejected', 'User has been removed.', 'info');
+      toast.info('Rejected: User has been removed.');
       fetchPendingUsers();
     } catch (err) {
       console.error('Rejection failed:', err);
-      Swal.fire('Error', 'Failed to reject user.', 'error');
+      toast.error('Error: Failed to reject user.');
     }
   };
 

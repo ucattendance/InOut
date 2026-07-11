@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import { API_ENDPOINTS } from '../../utils/api';
 
 const ApplyLeaveForm = () => {
@@ -15,7 +15,7 @@ const ApplyLeaveForm = () => {
     e.preventDefault();
 
     if (new Date(fromDate) > new Date(toDate)) {
-      Swal.fire('Invalid Dates', 'From Date should not be after To Date.', 'warning');
+      toast.warning('Invalid Dates: From Date should not be after To Date.');
       return;
     }
 
@@ -30,18 +30,12 @@ const ApplyLeaveForm = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Leave Applied!',
-        text: 'Your leave has been submitted successfully.',
-        showConfirmButton: false,
-        timer: 1500,
-      });
+      toast.success('Leave Applied! Your leave has been submitted successfully.');
 
       navigate('/attendance');
     } catch (error) {
       console.error(error);
-      Swal.fire('Error', 'Failed to apply for leave', 'error');
+      toast.error('Error: Failed to apply for leave');
     }
   };
 

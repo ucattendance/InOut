@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
+import { choiceToast, promptToast, confirmToast } from '../../utils/interactiveToast';
 import { API_ENDPOINTS } from '../../utils/api';
 import './Holidays.css'; // We'll create this CSS file for custom styling
 import Loader from '../../components/admin-dashboard/common/Loader';
@@ -38,7 +39,7 @@ const Holidays = () => {
       setHolidayMap(map);
     } catch (err) {
       console.error('Error fetching holidays:', err);
-      Swal.fire('Error', 'Failed to fetch holidays', 'error');
+      toast.error('Error: Failed to fetch holidays');
     } finally {
       setLoading(false);
     }
@@ -53,30 +54,23 @@ const Holidays = () => {
   const holiday = holidayMap[date.toDateString()];
 
   if (holiday) {
-    const { isConfirmed, isDenied } = await Swal.fire({
+    const choice = await choiceToast({
       title: 'Holiday Info',
       text: `${holiday.name} on ${date.toDateString()}`,
-      icon: 'info',
-      showCancelButton: true,
-      showDenyButton: true,
-      confirmButtonColor: '#3085d6',
-      denyButtonColor: '#d33',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Edit',
-      denyButtonText: 'Delete',
-      cancelButtonText: 'Close'
+      choices: [
+        { key: 'edit', label: 'Edit', tone: 'primary' },
+        { key: 'delete', label: 'Delete', tone: 'danger' },
+        { key: 'close', label: 'Close', tone: 'default' },
+      ],
     });
 
-    if (isConfirmed) {
+    if (choice === 'edit') {
       // ✏️ Edit holiday
-      const { value: name } = await Swal.fire({
+      const name = await promptToast({
         title: 'Edit Holiday',
-        input: 'text',
-        inputValue: holiday.name,
-        inputLabel: `Edit holiday name for ${date.toDateString()}`,
-        showCancelButton: true,
-        confirmButtonColor: '#16a34a',
-        cancelButtonColor: '#dc2626'
+        defaultValue: holiday.name,
+        label: `Edit holiday name for ${date.toDateString()}`,
+        confirmText: 'Save',
       });
 
       if (name) {
@@ -88,22 +82,19 @@ const Holidays = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
           await fetchHolidays();
-          Swal.fire('Success', 'Holiday updated successfully!', 'success');
+          toast.success('Success: Holiday updated successfully!');
         } catch (err) {
           console.error(err);
-          Swal.fire('Error', 'Failed to update holiday', 'error');
+          toast.error('Error: Failed to update holiday');
         }
       }
-    } else if (isDenied) {
+    } else if (choice === 'delete') {
       // 🗑️ Delete holiday
-      const { isConfirmed: confirmedDelete } = await Swal.fire({
+      const confirmedDelete = await confirmToast({
         title: 'Are you sure?',
         text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, delete it!'
+        confirmText: 'Yes, delete it!',
+        tone: 'danger',
       });
 
       if (confirmedDelete) {
@@ -112,23 +103,20 @@ const Holidays = () => {
             headers: { Authorization: `Bearer ${token}` }
           });
           await fetchHolidays();
-          Swal.fire('Deleted!', 'Holiday has been deleted.', 'success');
+          toast.success('Deleted! Holiday has been deleted.');
         } catch (err) {
           console.error(err);
-          Swal.fire('Error', 'Failed to delete holiday', 'error');
+          toast.error('Error: Failed to delete holiday');
         }
       }
     }
   } else {
     // ➕ Add new holiday
-    const { value: name } = await Swal.fire({
+    const name = await promptToast({
       title: 'Add Holiday',
-      input: 'text',
-      inputLabel: `Enter holiday name for ${date.toDateString()}`,
-      inputPlaceholder: 'e.g., Diwali, Pongal',
-      showCancelButton: true,
-      confirmButtonColor: '#16a34a',
-      cancelButtonColor: '#dc2626'
+      label: `Enter holiday name for ${date.toDateString()}`,
+      placeholder: 'e.g., Diwali, Pongal',
+      confirmText: 'Save',
     });
 
     if (name) {
@@ -140,10 +128,10 @@ const Holidays = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         await fetchHolidays();
-        Swal.fire('Success', 'Holiday added successfully!', 'success');
+        toast.success('Success: Holiday added successfully!');
       } catch (err) {
         console.error(err);
-        Swal.fire('Error', 'Failed to add holiday', 'error');
+        toast.error('Error: Failed to add holiday');
       }
     }
   }

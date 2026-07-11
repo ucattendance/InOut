@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-import Swal from "sweetalert2";
+import { toast } from "react-toastify";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "./AttendancePage.css";
@@ -20,7 +20,7 @@ import {
   FiMoon,
 } from "react-icons/fi";
 
-import { API_ENDPOINTS } from "../../utils/api";
+import { API_ENDPOINTS, logoutUser } from "../../utils/api";
 import { useTheme } from "../../utils/useTheme";
 import ProfileHeader from "../../components/attendance/ProfileHeader";
 import DateStrip from "../../components/attendance/DateStrip";
@@ -118,11 +118,7 @@ function AttendancePage() {
         }
       }
     } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Unable to load attendance data",
-      });
+      toast.error("Error: Unable to load attendance data");
     }
   };
 
@@ -134,11 +130,7 @@ function AttendancePage() {
         setDetectedOffice(resolveOfficeFromLocation(coords));
       },
       () =>
-        Swal.fire({
-          icon: "error",
-          title: "Location Error",
-          text: "Please enable GPS to proceed.",
-        })
+        toast.error("Location Error: Please enable GPS to proceed.")
     );
   };
 
@@ -151,11 +143,7 @@ function AttendancePage() {
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "Camera Access Denied",
-        text: "Please enable your camera and refresh the page.",
-      });
+      toast.error("Camera Access Denied: Please enable your camera and refresh the page.");
       setIsCapturing(false);
     }
   };
@@ -188,7 +176,7 @@ function AttendancePage() {
           setCapturedTime(new Date());
           getLocation();
         } else {
-          Swal.fire({ icon: "error", title: "Compression Failed" });
+          toast.error("Compression Failed");
         }
       },
       "image/jpeg",
@@ -199,11 +187,7 @@ function AttendancePage() {
   const submitAttendance = async () => {
     if (isSubmitting) return;
     if (!compressedBlob || !location) {
-      Swal.fire(
-        "Missing Data",
-        "Ensure image and location are available before submitting.",
-        "warning"
-      );
+      toast.warning("Missing Data: Ensure image and location are available before submitting.");
       return;
     }
 
@@ -221,11 +205,7 @@ function AttendancePage() {
         },
       });
 
-      Swal.fire(
-        "Success",
-        `${type === "check-in" ? "Checked In" : "Checked Out"} successfully`,
-        "success"
-      );
+      toast.success(`Success: ${type === "check-in" ? "Checked In" : "Checked Out"} successfully`);
       setImage(null);
       setCompressedBlob(null);
       setLocation("");
@@ -234,14 +214,14 @@ function AttendancePage() {
       stopCamera();
       fetchAttendance();
     } catch (err) {
-      Swal.fire("Failed", "Could not submit attendance", "error");
+      toast.error("Failed: Could not submit attendance");
     } finally {
       setIsSubmitting(false); // stop loading
     }
   };
 
-  const onLogout = () => {
-    localStorage.removeItem("token");
+  const onLogout = async () => {
+    await logoutUser();
     navigate("/login");
   };
 
@@ -369,10 +349,9 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
         <button
           onClick={toggleTheme}
           title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 bg-white/70 dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm hover:bg-white dark:hover:bg-gray-700 transition leading-none"
+          className="flex items-center justify-center p-2 rounded-full border border-gray-300 dark:border-gray-600 bg-white/70 dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm hover:bg-white dark:hover:bg-gray-700 transition leading-none"
         >
           {theme === "dark" ? <FiSun className="w-4 h-4 shrink-0" /> : <FiMoon className="w-4 h-4 shrink-0" />}
-          <span>{theme === "dark" ? "Light" : "Dark"}</span>
         </button>
       </div>
       <div >

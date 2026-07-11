@@ -1,5 +1,6 @@
 import React from 'react';
 import {  Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
 
 //  Admnin Dashboard
 import DashSavi from './pages/Dashboard';
@@ -39,6 +40,7 @@ import RelievingLetter from './pages/admin/RelievingLetter';
 import InternshipLetter from './pages/admin/InternshipLetter';
 import InternshipOfferLetter from './pages/admin/InternshipOfferLetter';
 import AllLetters from './pages/admin/AllLetters';
+import UploadDocuments from './pages/admin/UploadDocuments';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 import PendingUsers from './pages/admin/PendingUsers';
 import ApiDocsPage from './pages/admin/ApiDocsPage';
@@ -67,7 +69,8 @@ function App() {
   //   }
   // }, []);
   return (
-   
+    <>
+      <ToastContainer position="top-right" autoClose={3000} newestOnTop theme="light" />
       <Routes>
 
         {/* Public Routes */}
@@ -99,6 +102,7 @@ function App() {
           <Route path="/internship-letter" element={<InternshipLetter />} />
           <Route path="/internship-offer" element={<InternshipOfferLetter />} />
           <Route path="/all-letters" element={<AllLetters />} />
+          <Route path="/upload-documents" element={<UploadDocuments />} />
           <Route path="/pending-users" element={<PendingUsers />} />
           <Route path="/add-user" element={<AddUser />} />
           <Route path="/all-users" element={<AllUsers />} />
@@ -115,7 +119,7 @@ function App() {
         </Route>
 
       </Routes>
-   
+    </>
   );
 }
 

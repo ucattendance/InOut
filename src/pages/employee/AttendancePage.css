@@ -34,7 +34,7 @@
 
 /* Style for the selected date */
 .react-calendar__tile--active {
-  background-color: #3b82f6 !important; /* blue-500 */
+  background-color: #159C8E !important;
   color: white !important;
 }
 

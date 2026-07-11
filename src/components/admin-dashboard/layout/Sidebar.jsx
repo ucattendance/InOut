@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './layout.css';
+import { logoutUser } from '../../../utils/api';
 import {
   FiHome, FiUsers, FiCalendar, FiBarChart2, FiSettings, FiLogOut,
   FiFileText, FiDollarSign, FiCamera, FiChevronRight
@@ -38,7 +39,7 @@ const menuItems = [
           { label: 'Offer Letters', path: '/offer-letters' },
           { label: 'All Letters', path: '/all-letters' },
           { label: 'Relieving Letters', path: '/relieving-letters' },
-          { label: 'Upload Documents', path: '/coming-soon/upload-documents' }
+          { label: 'Upload Documents', path: '/upload-documents' }
         ]
       },
   { label: 'Pay History', icon: <FiDollarSign />, path: '/salaryhistory' },
@@ -65,8 +66,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     }));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    await logoutUser();
     window.location.href = '/login';
   };
 

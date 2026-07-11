@@ -42,7 +42,7 @@
 
 .main-edit {
   padding: 0.75rem 2rem;
-  background: #3fa56d;
+  background: #159C8E;
   color: white;
   border: none;
   border-radius: 50px;
@@ -50,17 +50,17 @@
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(63, 165, 109, 0.3);
+  box-shadow: 0 4px 12px rgba(21, 156, 142, 0.3);
 }
 
 .main-edit:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(63, 165, 109, 0.4);
+  box-shadow: 0 6px 16px rgba(21, 156, 142, 0.4);
 }
 
 .main-save {
   padding: 0.75rem 2rem;
-  background: #3fa56d;
+  background: #159C8E;
   color: white;
   border: none;
   border-radius: 50px;
@@ -68,13 +68,13 @@
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(63, 165, 109, 0.3);
+  box-shadow: 0 4px 12px rgba(21, 156, 142, 0.3);
 }
 
 .main-save:hover {
-  background: #35945c;
+  background: #0F7A6E;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(63, 165, 109, 0.4);
+  box-shadow: 0 6px 16px rgba(21, 156, 142, 0.4);
 }
 
 .main-cancel {
@@ -126,23 +126,23 @@
   border-radius: 20px;
   padding: 1.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(63, 165, 109, 0.1);
+  border: 1px solid rgba(21, 156, 142, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .card:hover {
-  box-shadow: 0 8px 30px rgba(63, 165, 109, 0.12);
+  box-shadow: 0 8px 30px rgba(21, 156, 142, 0.12);
 }
 
 .card-header {
   margin-bottom: 1.25rem;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid rgba(63, 165, 109, 0.1);
+  border-bottom: 2px solid rgba(21, 156, 142, 0.1);
 }
 
 .card-header h3 {
   margin: 0;
-  color: #3fa56d;
+  color: #159C8E;
   font-size: 1.2rem;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -168,9 +168,9 @@
   height: 130px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid #3fa56d;
+  border: 4px solid #159C8E;
   margin-bottom: 1rem;
-  box-shadow: 0 8px 20px rgba(63, 165, 109, 0.25);
+  box-shadow: 0 8px 20px rgba(21, 156, 142, 0.25);
   transition: transform 0.3s ease;
 }
 
@@ -197,13 +197,13 @@
   align-items: center;
   margin: 1rem 0;
   width: 100%;
-  background: rgba(63, 165, 109, 0.05);
+  background: rgba(21, 156, 142, 0.05);
   padding: 0.75rem;
   border-radius: 12px;
 }
 
 .info-item strong {
-  color: #3fa56d;
+  color: #159C8E;
   margin-bottom: 0.25rem;
   font-size: 0.9rem;
   font-weight: 600;
@@ -220,18 +220,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background: rgba(63, 165, 109, 0.03);
+  background: rgba(21, 156, 142, 0.03);
   border-radius: 12px;
   margin-bottom: 0.5rem;
   transition: background 0.3s ease;
 }
 
 .info-row:hover {
-  background: rgba(63, 165, 109, 0.06);
+  background: rgba(21, 156, 142, 0.06);
 }
 
 .info-row strong {
-  color: #3fa56d;
+  color: #159C8E;
   font-weight: 600;
   font-size: 0.9rem;
   min-width: 120px;
@@ -248,7 +248,7 @@
 /* Edit Inputs */
 .edit-input {
   padding: 0.75rem 1rem;
-  border: 2px solid rgba(63, 165, 109, 0.2);
+  border: 2px solid rgba(21, 156, 142, 0.2);
   border-radius: 12px;
   font-size: 0.95rem;
   width: 100%;
@@ -258,13 +258,13 @@
 
 .edit-input:focus {
   outline: none;
-  border-color: #3fa56d;
-  box-shadow: 0 0 0 3px rgba(63, 165, 109, 0.15);
+  border-color: #159C8E;
+  box-shadow: 0 0 0 3px rgba(21, 156, 142, 0.15);
 }
 
 .edit-select {
   padding: 0.75rem 1rem;
-  border: 2px solid rgba(63, 165, 109, 0.2);
+  border: 2px solid rgba(21, 156, 142, 0.2);
   border-radius: 12px;
   font-size: 0.95rem;
   width: 100%;
@@ -275,8 +275,8 @@
 
 .edit-select:focus {
   outline: none;
-  border-color: #3fa56d;
-  box-shadow: 0 0 0 3px rgba(63, 165, 109, 0.15);
+  border-color: #159C8E;
+  box-shadow: 0 0 0 3px rgba(21, 156, 142, 0.15);
 }
 
 /* Skills Section */
@@ -293,7 +293,7 @@
 }
 
 .skill-item {
-  border: 2px solid #3fa56d;
+  border: 2px solid #159C8E;
   color: #2d3748;
   padding: 0.6rem 1.2rem;
   border-radius: 30px;
@@ -306,7 +306,7 @@
 }
 
 .skill-item:hover {
-  background: rgba(63, 165, 109, 0.05);
+  background: rgba(21, 156, 142, 0.05);
   transform: translateY(-2px);
 }
 
@@ -337,9 +337,9 @@
 }
 
 .add-skill-btn {
-  color: #3fa56d;
+  color: #159C8E;
   background: transparent;
-  border: 2px dashed #3fa56d;
+  border: 2px dashed #159C8E;
   padding: 0.75rem 1rem;
   border-radius: 12px;
   cursor: pointer;
@@ -349,7 +349,7 @@
 }
 
 .add-skill-btn:hover {
-  background: rgba(63, 165, 109, 0.05);
+  background: rgba(21, 156, 142, 0.05);
   border-style: solid;
 }
 
@@ -367,18 +367,18 @@
 }
 
 .role-item {
-  background: rgba(63, 165, 109, 0.05);
+  background: rgba(21, 156, 142, 0.05);
   color: #2d3748;
   padding: 0.75rem 1.2rem;
   border-radius: 12px;
   font-size: 0.95rem;
-  border-left: 4px solid #3fa56d;
+  border-left: 4px solid #159C8E;
   flex: 1;
   transition: all 0.3s ease;
 }
 
 .role-item:hover {
-  background: rgba(63, 165, 109, 0.08);
+  background: rgba(21, 156, 142, 0.08);
   transform: translateX(2px);
 }
 
@@ -409,9 +409,9 @@
 }
 
 .add-role-btn {
-  color: #3fa56d;
+  color: #159C8E;
   background: transparent;
-  border: 2px dashed #3fa56d;
+  border: 2px dashed #159C8E;
   padding: 0.75rem 1rem;
   border-radius: 12px;
   cursor: pointer;
@@ -421,7 +421,7 @@
 }
 
 .add-role-btn:hover {
-  background: rgba(63, 165, 109, 0.05);
+  background: rgba(21, 156, 142, 0.05);
   border-style: solid;
 }
 
@@ -433,7 +433,7 @@
 
 .upload-label {
   display: block;
-  color: #3fa56d;
+  color: #159C8E;
   font-weight: 600;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
@@ -442,14 +442,14 @@
 .upload-block input[type="file"] {
   width: 100%;
   padding: 0.5rem;
-  border: 2px dashed rgba(63, 165, 109, 0.3);
+  border: 2px dashed rgba(21, 156, 142, 0.3);
   border-radius: 12px;
   cursor: pointer;
   font-size: 0.9rem;
 }
 
 .upload-block input[type="file"]:hover {
-  border-color: #3fa56d;
+  border-color: #159C8E;
 }
 
 /* Education, Personal Details, Banking, Company Sections */
@@ -489,19 +489,19 @@
 }
 
 .profile-container::-webkit-scrollbar-thumb {
-  background: #3fa56d;
+  background: #159C8E;
   border-radius: 4px;
 }
 
 .profile-container::-webkit-scrollbar-thumb:hover {
-  background: #35945c;
+  background: #0F7A6E;
 }
 
 /* Focus states for accessibility (scoped to profile page only) */
 .profile-container button:focus,
 .profile-container input:focus,
 .profile-container select:focus {
-  outline: 2px solid #3fa56d;
+  outline: 2px solid #159C8E;
   outline-offset: 2px;
 }
 
@@ -621,7 +621,7 @@
     text-align: left;
     width: 100%;
     padding-left: 0.5rem;
-    border-left: 3px solid #3fa56d;
+    border-left: 3px solid #159C8E;
   }
   
   .info-item {

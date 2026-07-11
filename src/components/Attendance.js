@@ -9,7 +9,7 @@ import {
 import { jwtDecode } from 'jwt-decode';
 import { API_ENDPOINTS } from '../utils/api';
 import { appendAttendanceImage } from '../utils/attendanceImage';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 function Attendance() {
   const [location, setLocation] = useState('');
@@ -44,7 +44,7 @@ function Attendance() {
 
         setAttendanceHistory(myAttendance.data.slice(0, 5));
       } catch (err) {
-        Swal.fire({ icon: 'error', title: 'Fetch Error', text: 'Could not load your attendance data.' });
+        toast.error('Fetch Error: Could not load your attendance data.');
       }
     };
 
@@ -57,7 +57,7 @@ function Attendance() {
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
-        Swal.fire({ icon: 'error', title: 'Camera Access Denied', text: 'Please enable your camera and refresh the page.' });
+        toast.error('Camera Access Denied: Please enable your camera and refresh the page.');
         setIsCapturing(false);
       }
     };
@@ -140,7 +140,7 @@ function Attendance() {
   const handleSubmit = async (photoFile) => {
     const fileToSend = photoFile || image;
     if (!fileToSend) {
-      Swal.fire('No image captured!');
+      toast.warning('No image captured!');
       return;
     }
     setIsLoading(true);
@@ -157,15 +157,15 @@ function Attendance() {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
-        Swal.fire(`${type === 'check-in' ? 'Checked In' : 'Checked Out'} successfully!`);
+        toast.success(`${type === 'check-in' ? 'Checked In' : 'Checked Out'} successfully!`);
         setImage(null);
       } catch (err) {
-        Swal.fire({ icon: 'error', title: 'Failed to Submit' });
+        toast.error('Failed to Submit');
       } finally {
         setIsLoading(false);
       }
     }, () => {
-      Swal.fire({ icon: 'error', title: 'Location Error', text: 'Please enable GPS to proceed.' });
+      toast.error('Location Error: Please enable GPS to proceed.');
       setIsLoading(false);
     });
   };
@@ -173,7 +173,7 @@ function Attendance() {
   const captureAndSubmit = async () => {
     const captured = await captureImage();
     if (!captured) {
-      Swal.fire({ icon: 'error', title: 'Image Capture Failed' });
+      toast.error('Image Capture Failed');
       return;
     }
     setImage(captured);

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
+import { confirmToast } from '../../utils/interactiveToast';
 import { MoreVertical, UserPlus } from 'lucide-react';
 import { API_ENDPOINTS } from '../../utils/api';
 // UserCard is used on the dedicated user detail page now
@@ -122,16 +123,14 @@ const AllUsers = () => {
     const nextActive = !user.isActive;
     const actionLabel = nextActive ? 'enable' : 'disable';
 
-    const result = await Swal.fire({
+    const confirmed = await confirmToast({
       title: `${nextActive ? 'Enable' : 'Disable'} user?`,
       text: `${user.name} (${user.employeeId || 'no ID'}) will be ${actionLabel}d.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: nextActive ? '#16a34a' : '#dc2626',
-      confirmButtonText: nextActive ? 'Enable' : 'Disable',
+      confirmText: nextActive ? 'Enable' : 'Disable',
+      tone: nextActive ? 'success' : 'danger',
     });
 
-    if (!result.isConfirmed) return;
+    if (!confirmed) return;
 
     try {
       setUpdating(true);
@@ -143,14 +142,14 @@ const AllUsers = () => {
             : u
         )
       );
-      Swal.fire('Success', `User ${actionLabel}d successfully.`, 'success');
+      toast.success(`Success: User ${actionLabel}d successfully.`);
     } catch (error) {
       console.error('Failed to update user status:', error);
       const apiMsg =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.response?.data?.msg;
-      Swal.fire('Error', apiMsg || `Could not ${actionLabel} user.`, 'error');
+      toast.error(`Error: ${apiMsg || `Could not ${actionLabel} user.`}`);
     } finally {
       setUpdating(false);
     }

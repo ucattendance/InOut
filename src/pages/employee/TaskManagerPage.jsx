@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
+import { promptToast } from '../../utils/interactiveToast';
 import { API_ENDPOINTS } from '../../utils/api';
 import { useNavigate } from 'react-router-dom';
 import PromoTimer from '../../components/attendance/PromoTimer';
@@ -24,7 +25,7 @@ const TaskManagerPage = () => {
       });
       setTasks(res.data);
     } catch (err) {
-      Swal.fire('Error', 'Unable to fetch tasks.', 'error');
+      toast.error('Error: Unable to fetch tasks.');
     }
   }, [formattedDate]);
 
@@ -58,7 +59,7 @@ const TaskManagerPage = () => {
       fetchTasks();
       fetchSummary();
     } catch (err) {
-      Swal.fire('Error', 'Failed to add task.', 'error');
+      toast.error('Error: Failed to add task.');
     }
   };
 
@@ -73,7 +74,7 @@ const TaskManagerPage = () => {
       fetchTasks();
       fetchSummary();
     } catch (err) {
-      Swal.fire('Error', 'Failed to update task status.', 'error');
+      toast.error('Error: Failed to update task status.');
     }
   };
 
@@ -86,17 +87,15 @@ const TaskManagerPage = () => {
       fetchTasks();
       fetchSummary();
     } catch (err) {
-      Swal.fire('Error', 'Failed to delete task.', 'error');
+      toast.error('Error: Failed to delete task.');
     }
   };
 
   const updateTask = async (id, currentName) => {
-    const { value: updatedName } = await Swal.fire({
+    const updatedName = await promptToast({
       title: 'Edit Task',
-      input: 'text',
-      inputValue: currentName,
-      showCancelButton: true,
-      confirmButtonText: 'Update',
+      defaultValue: currentName,
+      confirmText: 'Update',
     });
 
     if (!updatedName || updatedName.trim() === currentName.trim()) return;
@@ -111,7 +110,7 @@ const TaskManagerPage = () => {
       fetchTasks();
       fetchSummary();
     } catch (err) {
-      Swal.fire('Error', 'Failed to update task.', 'error');
+      toast.error('Error: Failed to update task.');
     }
   };
 

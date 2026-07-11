@@ -31,7 +31,7 @@ import {
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../utils/api';
 import Loader from '../../components/admin-dashboard/common/Loader';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 
 
@@ -108,10 +108,10 @@ const EmployeeSchedule = () => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      Swal.fire({ icon: 'success', title: 'Saved', text: 'Changes saved successfully', timer: 1400, showConfirmButton: false });
+      toast.success('Saved: Changes saved successfully');
     } catch (err) {
       console.error(err);
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save changes' });
+      toast.error('Error: Failed to save changes');
     }
   };
 

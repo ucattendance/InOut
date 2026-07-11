@@ -307,14 +307,14 @@ const theme = createTheme({
   select
   sx={{
     minWidth: 300,
-    '& .MuiInputLabel-root': { color: '#1976d2' }, // blue label
+    '& .MuiInputLabel-root': { color: '#159C8E' },
     '& .MuiFilledInput-root': {
       backgroundColor: '#f9fafb',
       '&:hover': { backgroundColor: '#f1f5f9' },
       '&.Mui-focused': { backgroundColor: '#fff' }
     },
     '& .MuiFilledInput-underline:after': {
-      borderBottomColor: '#1976d2'
+      borderBottomColor: '#159C8E'
     }
   }}
   fullWidth

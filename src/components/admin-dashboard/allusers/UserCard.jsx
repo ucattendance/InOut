@@ -196,7 +196,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
           <div className="uc-profile-grid-2">
             <div className="uc-profile-section">
               <h4>
-                <Building size={18} color="#2563eb" />
+                <Building size={18} color="#159C8E" />
                 Work Information
                 {works.length > 1 && (
                   <span style={{ fontSize: '0.7rem', fontWeight: 500, color: '#4f46e5', marginLeft: 6 }}>
@@ -242,7 +242,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
 
             <div className="uc-profile-section">
               <h4>
-                <User size={18} color="#2563eb" />
+                <User size={18} color="#159C8E" />
                 Personal Details
               </h4>
               <div className="uc-profile-row">

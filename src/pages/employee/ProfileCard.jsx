@@ -1,7 +1,7 @@
 import './ProfileCard.css';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import { API_ENDPOINTS } from '../../utils/api';
 
 export default function ProfileCard() {
@@ -161,11 +161,11 @@ export default function ProfileCard() {
       setIsEditingAll(false);
       // Small success feedback
       try {
-        Swal.fire({ icon: 'success', title: 'Profile updated', text: 'Your profile was updated successfully', timer: 1500, showConfirmButton: false });
+        toast.success('Profile updated: Your profile was updated successfully');
       } catch (e) { /* ignore */ }
     } catch (error) {
       console.error('Error updating profile:', error);
-  try { Swal.fire({ icon: 'error', title: 'Update failed', text: 'Failed to update profile. See console for details.' }); } catch (e) { /* ignore */ }
+  try { toast.error('Update failed: Failed to update profile. See console for details.'); } catch (e) { /* ignore */ }
     }
   };
 
@@ -181,10 +181,10 @@ export default function ProfileCard() {
       await axios.put(API_ENDPOINTS.updateProfile, { profilePic: '' }, { headers: { Authorization: `Bearer ${token}` } });
       setProfile(prev => ({ ...prev, profilePic: '' }));
       setPreviewSrc(null);
-      try { Swal.fire({ icon: 'success', title: 'Removed', text: 'Profile picture removed', timer: 1200, showConfirmButton: false }); } catch (e) {}
+      try { toast.success('Removed: Profile picture removed'); } catch (e) {}
     } catch (err) {
       console.error('Failed to remove profile pic', err);
-      try { Swal.fire({ icon: 'error', title: 'Remove failed', text: 'Could not remove profile picture' }); } catch (e) {}
+      try { toast.error('Remove failed: Could not remove profile picture'); } catch (e) {}
     }
   };
 
@@ -215,7 +215,7 @@ export default function ProfileCard() {
             <div className="basic-info">
               <div className="left">
                 <img
-                  src={previewSrc || profile.profilePic || "/default-avatar.jpg"}
+                  src={previewSrc || profile.profilePic || "/default-avatar.png"}
                   alt="Profile"
                   className="avatar"
                 />
@@ -252,13 +252,13 @@ export default function ProfileCard() {
 
                         // Client-side guards
                         if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-                          try { Swal.fire({ icon: 'warning', title: 'Invalid file type', text: 'Only JPG and PNG are allowed.' }); } catch (e) {}
+                          try { toast.warning('Invalid file type: Only JPG and PNG are allowed.'); } catch (e) {}
                           if (localUrl) URL.revokeObjectURL(localUrl);
                           setPreviewSrc(null);
                           return;
                         }
                         if (file.size > MAX_FILE_SIZE) {
-                          try { Swal.fire({ icon: 'warning', title: 'File too large', text: 'Maximum allowed size is 2 MB.' }); } catch (e) {}
+                          try { toast.warning('File too large: Maximum allowed size is 2 MB.'); } catch (e) {}
                           if (localUrl) URL.revokeObjectURL(localUrl);
                           setPreviewSrc(null);
                           return;
@@ -283,7 +283,7 @@ export default function ProfileCard() {
                           setPreviewSrc(null);
                         } catch (err) {
                           console.error('Upload failed', err);
-                          try { Swal.fire({ icon: 'error', title: 'Upload failed', text: 'Image upload failed' }); } catch (e) {}
+                          try { toast.error('Upload failed: Image upload failed'); } catch (e) {}
                           // keep preview so user can retry or choose another
                         } finally {
                           setUploading(false);

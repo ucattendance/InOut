@@ -1,5 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './utils/axiosSetup';
+import 'react-toastify/dist/ReactToastify.css';
 import './index.css';
 import './styles/admin-ui.css';
 import App from './App';

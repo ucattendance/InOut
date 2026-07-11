@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import { API_ENDPOINTS } from '../utils/api';
 import { BRANCH_OPTIONS } from '../utils/branches';
 import {
@@ -98,7 +98,7 @@ export default function RegisterMultiStep() {
   const handleNext = () => {
     const err = validateStep();
     if (err) {
-      Swal.fire({ icon: 'warning', title: 'Validation', text: err, confirmButtonColor: '#6ca8a4' });
+      toast.warning(`Validation: ${err}`);
       return;
     }
     next();
@@ -108,7 +108,7 @@ export default function RegisterMultiStep() {
     e.preventDefault();
     const err = validateStep();
     if (err) {
-      Swal.fire({ icon: 'warning', title: 'Validation', text: err, confirmButtonColor: '#6ca8a4' });
+      toast.warning(`Validation: ${err}`);
       return;
     }
 
@@ -144,13 +144,13 @@ export default function RegisterMultiStep() {
 
       await axios.post(API_ENDPOINTS.register, payload);
 
-      Swal.fire({ icon: 'success', title: 'Submitted', text: 'Registration submitted and is pending admin approval', confirmButtonColor: '#6ca8a4' });
+      toast.success('Submitted: Registration submitted and is pending admin approval');
       setFormData(initialForm);
       setStep(1);
 
     } catch (error) {
       console.error(error);
-      Swal.fire({ icon: 'error', title: 'Error', text: error.response?.data?.error || 'Failed to submit registration', confirmButtonColor: '#ef4444' });
+      toast.error(`Error: ${error.response?.data?.error || 'Failed to submit registration'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -189,13 +189,13 @@ export default function RegisterMultiStep() {
 
             <div className="flex gap-2">
               {step < stepsCount && (
-                <button type="button" onClick={handleNext} className="inline-flex items-center px-4 py-2 bg-[#6ca8a4] text-white rounded-md hover:bg-[#5a9792]">
+                <button type="button" onClick={handleNext} className="inline-flex items-center px-4 py-2 bg-[#159C8E] text-white rounded-md hover:bg-[#0F7A6E]">
                   Next <FiChevronRight className="ml-2" />
                 </button>
               )}
 
               {step === stepsCount && (
-                <button type="submit" disabled={isSubmitting} className={`inline-flex items-center px-4 py-2 bg-[#6ca8a4] text-white rounded-md ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                <button type="submit" disabled={isSubmitting} className={`inline-flex items-center px-4 py-2 bg-[#159C8E] text-white rounded-md ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}>
                   {isSubmitting ? 'Submitting...' : 'Submit'}
                 </button>
               )}
@@ -213,7 +213,7 @@ function Header({ step, stepsCount }) {
       <h2 className="text-2xl font-bold text-[#2c2e3e]">Multi-step Registration</h2>
       <p className="text-sm text-gray-600 mt-1">Step {step} of {stepsCount}</p>
       <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-3">
-        <div className="h-2 bg-[#6ca8a4]" style={{ width: `${(step / stepsCount) * 100}%` }} />
+        <div className="h-2 bg-[#159C8E]" style={{ width: `${(step / stepsCount) * 100}%` }} />
       </div>
     </div>
   );
@@ -229,7 +229,7 @@ function PersonalDetails({ formData, handleChange, showPassword, setShowPassword
         <label className="block text-sm font-medium text-[#2c2e3e] mb-1">Password</label>
         <div className="relative">
           <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required placeholder="••••••" className="block w-full rounded-md border border-gray-300 px-3 py-2" />
-          <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-2 top-2 text-sm text-[#6ca8a4]">{showPassword ? 'Hide' : 'Show'}</button>
+          <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-2 top-2 text-sm text-[#159C8E]">{showPassword ? 'Hide' : 'Show'}</button>
         </div>
       </div>
 
@@ -244,7 +244,7 @@ function PersonalDetails({ formData, handleChange, showPassword, setShowPassword
 
       <div className="max-w-xs">
         <label className="block text-sm font-medium text-[#2c2e3e] mb-1 flex items-center">
-          <FiHome className="mr-2 text-[#6ca8a4]" /> Branch *
+          <FiHome className="mr-2 text-[#159C8E]" /> Branch *
         </label>
         <select
           name="branch"
@@ -280,7 +280,7 @@ function JobDetails({ formData, handleChange }) {
       <Input label="Position" name="position" value={formData.position} onChange={handleChange} icon={<FiBriefcase />} />
       <div>
         <label className="block text-sm font-medium text-[#2c2e3e] mb-1 flex items-center">
-          <FiHome className="mr-2 text-[#6ca8a4]" /> Company
+          <FiHome className="mr-2 text-[#159C8E]" /> Company
         </label>
         <select name="company" value={formData.company} onChange={handleChange} required className="block w-full rounded-md border border-gray-300 px-3 py-2">
           <option value="">Select Company</option>
@@ -389,7 +389,7 @@ function Input({ label, name, value, onChange, type = 'text', icon }) {
   return (
     <div>
       <label className="block text-sm font-medium text-[#2c2e3e] mb-1 flex items-center">
-        {icon && <span className="mr-2 text-[#6ca8a4]">{icon}</span>}
+        {icon && <span className="mr-2 text-[#159C8E]">{icon}</span>}
         {label}
       </label>
       <input type={type} name={name} value={value} onChange={onChange} className="block w-full rounded-md border border-gray-300 px-3 py-2" />

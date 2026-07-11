@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { FiUserPlus, FiArrowLeft } from 'react-icons/fi';
 import { API_ENDPOINTS } from '../../utils/api';
@@ -53,7 +53,7 @@ const AddUser = () => {
     e.preventDefault();
     const err = validate();
     if (err) {
-      Swal.fire({ icon: 'warning', title: 'Validation', text: err });
+      toast.warning(`Validation: ${err}`);
       return;
     }
 
@@ -89,20 +89,14 @@ const AddUser = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      await Swal.fire({
-        icon: 'success',
-        title: 'User Created',
-        text: data?.user?.employeeId
-          ? `${form.name} added as ${data.user.employeeId}`
-          : `${form.name} added successfully`,
-      });
+      toast.success(
+        data?.user?.employeeId
+          ? `User Created: ${form.name} added as ${data.user.employeeId}`
+          : `User Created: ${form.name} added successfully`
+      );
       navigate('/all-users');
     } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Failed',
-        text: error.response?.data?.error || 'Could not create user',
-      });
+      toast.error(`Failed: ${error.response?.data?.error || 'Could not create user'}`);
     } finally {
       setSubmitting(false);
     }

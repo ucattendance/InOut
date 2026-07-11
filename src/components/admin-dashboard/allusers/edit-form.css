@@ -165,8 +165,8 @@
 .uc-form-field select:focus,
 .uc-form-field textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: #159C8E;
+  box-shadow: 0 0 0 2px rgba(21, 156, 142, 0.2);
 }
 
 .uc-form-check {

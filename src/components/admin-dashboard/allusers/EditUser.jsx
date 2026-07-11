@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import { API_ENDPOINTS } from '../../../utils/api';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, Trash2 } from 'lucide-react';
@@ -62,7 +62,7 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
           branch: extractBranchFromUser(data),
         });
       })
-      .catch(() => Swal.fire('Error', 'Failed to fetch user', 'error'));
+      .catch(() => toast.error('Error: Failed to fetch user'));
   }, [userId]);
 
   const handleChange = (e) => {
@@ -77,23 +77,23 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
 
   const handlePasswordUpdate = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      Swal.fire('Error', 'Passwords do not match', 'error');
+      toast.error('Error: Passwords do not match');
       return;
     }
     if (passwordData.newPassword.length < 6) {
-      Swal.fire('Error', 'Password must be at least 6 characters long', 'error');
+      toast.error('Error: Password must be at least 6 characters long');
       return;
     }
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       await axios.put(API_ENDPOINTS.updateUser(userId), { password: passwordData.newPassword }, { headers });
-      Swal.fire('Success', 'Password updated successfully', 'success');
+      toast.success('Success: Password updated successfully');
       setPasswordData({ newPassword: '', confirmPassword: '' });
       setShowPasswordFields(false);
     } catch (err) {
       console.error(err);
-      Swal.fire('Error', 'Password update failed', 'error');
+      toast.error('Error: Password update failed');
     }
   };
 
@@ -104,13 +104,13 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
       const headers = { Authorization: `Bearer ${token}` };
       const payload = buildUserUpdatePayload(form);
       const { data } = await axios.put(API_ENDPOINTS.updateUser(userId), payload, { headers });
-      Swal.fire('Success', 'User updated successfully', 'success');
+      toast.success('Success: User updated successfully');
       onUpdated?.(data?.user);
       if (isPage) navigate('/all-users', { state: { userListRefresh: Date.now() } });
       else onClose?.();
     } catch (err) {
       console.error(err);
-      Swal.fire('Error', 'Update failed', 'error');
+      toast.error('Error: Update failed');
     }
   };
 

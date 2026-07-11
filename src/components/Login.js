@@ -2,7 +2,7 @@ import React, { useState,useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 // import jobzenterLogo from '../assets/jzlogo.png';
 // import urbancodeLogo from '../assets/uclogo.png';
@@ -48,14 +48,7 @@ function Login() {
       localStorage.setItem('token', token);
       const decoded = jwtDecode(token);
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Welcome!',
-        text: 'Login successful. Redirecting...',
-        timer: 2000,
-        showConfirmButton: false,
-        timerProgressBar: true,
-      });
+      toast.success('Welcome! Login successful. Redirecting...');
 
       setTimeout(() => {
         if (decoded.role === 'admin') navigate('/dashboard');
@@ -64,11 +57,7 @@ function Login() {
       }, 2000);
 
     } catch (err) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Login Failed',
-        text: err?.message || 'Something went wrong.',
-      });
+      toast.error(`Login Failed: ${err?.message || 'Something went wrong.'}`);
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +86,7 @@ function Login() {
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white/60 placeholder-gray-400 text-gray-800 focus:ring-2 focus:ring-[#6ca8a4] focus:outline-none"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white/60 placeholder-gray-400 text-gray-800 focus:ring-2 focus:ring-[#159C8E] focus:outline-none"
               placeholder="you@domain.com"
             />
           </div>
@@ -112,13 +101,13 @@ function Login() {
               required
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white/60 placeholder-gray-400 text-gray-800 focus:ring-2 focus:ring-[#6ca8a4] focus:outline-none"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white/60 placeholder-gray-400 text-gray-800 focus:ring-2 focus:ring-[#159C8E] focus:outline-none"
               placeholder="••••••••"
             />
             <button
   type="button"
   onClick={() => setShowPassword((prev) => !prev)}
-  className="text-sm text-[#6ca8a4] hover:underline mt-1"
+  className="text-sm text-[#159C8E] hover:underline mt-1"
 >
   {showPassword ? "Hide Password" : "Show Password"}
 </button>
@@ -126,19 +115,15 @@ function Login() {
 
           <div className="flex items-center justify-between text-sm">
             <label className="flex items-center gap-2 text-[#2c2e3e]">
-              <input type="checkbox" className="accent-[#6ca8a4]" />
+              <input type="checkbox" className="accent-[#159C8E]" />
               Remember me
             </label>
             <button
               type="button"
               onClick={() =>
-                Swal.fire({
-                  icon: 'info',
-                  title: 'Forgot Password?',
-                  text: 'Contact admin for password reset.',
-                })
+                toast.info('Forgot Password? Contact admin for password reset.')
               }
-              className="text-[#6ca8a4] hover:underline font-medium"
+              className="text-[#159C8E] hover:underline font-medium"
             >
               Forgot Password?
             </button>
@@ -147,7 +132,7 @@ function Login() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-[#6ca8a4] hover:bg-[#5a9792] text-white font-semibold py-3 rounded-lg transition duration-150 shadow-md"
+            className="w-full bg-[#159C8E] hover:bg-[#0F7A6E] text-white font-semibold py-3 rounded-lg transition duration-150 shadow-md"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -155,7 +140,7 @@ function Login() {
 
         <div className="text-center text-sm mt-6 text-[#6e7b8b]">
           Don’t have an account?{' '}
-          <a href="/register" className="text-[#5a9792] font-semibold hover:underline">
+          <a href="/register" className="text-[#0F7A6E] font-semibold hover:underline">
             Register
           </a>
         </div>

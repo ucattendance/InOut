@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import letterheadUrl from '../../assets/letterhead.pdf';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import { shrinkLetterheadPhoneIconOnAllPages } from '../../utils/letterheadFooter';
 import { sanitizeTextForStandardFonts } from '../../utils/pdfTextSanitizer';
 
@@ -386,11 +386,7 @@ const OfferLetters = () => {
 
   const generatePdf = async () => {
     if (!form.candidateName?.trim() || !form.company?.trim() || !form.designation?.trim()) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Missing details',
-        text: 'Select a candidate and ensure name, company, and designation are filled before generating.',
-      });
+      toast.warning('Missing details: Select a candidate and ensure name, company, and designation are filled before generating.');
       return;
     }
 
@@ -576,7 +572,7 @@ const OfferLetters = () => {
       setPdfUrl(URL.createObjectURL(blob));
     } catch (err) {
       console.error('PDF generation error', err);
-      Swal.fire({ icon: 'error', title: 'Failed', text: 'Failed to generate PDF. See console for details.' });
+      toast.error('Failed: Failed to generate PDF. See console for details.');
     } finally {
       setGenerating(false);
     }
@@ -600,11 +596,11 @@ const OfferLetters = () => {
         if (pdfBytesData) {
           const { uploadLetterBytes } = await import('../../utils/uploadLetter');
           await uploadLetterBytes(pdfBytesData, `${form.candidateName || 'offer-letter'}.pdf`, selected || undefined);
-          Swal.fire({ icon: 'success', title: 'Saved', text: 'Letter uploaded to cloud', timer: 1300, showConfirmButton: false });
+          toast.success('Saved: Letter uploaded to cloud');
         }
       } catch (err) {
         console.error('Upload failed', err);
-        Swal.fire({ icon: 'warning', title: 'Upload failed', text: 'Letter could not be uploaded to cloud. Download will continue.' });
+        toast.warning('Upload failed: Letter could not be uploaded to cloud. Download will continue.');
       } finally {
         const a = document.createElement('a');
         a.href = pdfUrl;

@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   // -----------------
   login: `${BASE_URL}/auth/login`,
   register: `${BASE_URL}/auth/register`,
+  logout: `${BASE_URL}/auth/logout`,
   // -----------------
   // Users
   // -----------------
@@ -174,6 +175,15 @@ export const register = async (userData) => {
 };
 
 export const logout = () => {
+  localStorage.removeItem('token');
+};
+
+export const logoutUser = async () => {
+  try {
+    await fetch(API_ENDPOINTS.logout, { method: 'POST', credentials: 'include' });
+  } catch (_) {
+    // Best-effort — still clear local state below.
+  }
   localStorage.removeItem('token');
 };
 // -----------------Schedule APIs-----------------

@@ -11,14 +11,10 @@ function ProtectedRoute({ children }) {
   }
 
   try {
-    const decoded = jwtDecode(token);
-    const isExpired = decoded.exp * 1000 < Date.now();
-
-    if (isExpired) {
-      localStorage.removeItem("token");
-      return <Navigate to="/login" replace />;
-    }
-
+    jwtDecode(token);
+    // Access-token expiry is enforced by the API layer (axios interceptor
+    // silently refreshes via the httpOnly refresh cookie) — don't bounce to
+    // /login here just because the short-lived access token has expired.
     return children;
   } catch (err) {
     localStorage.removeItem("token");

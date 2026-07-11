@@ -1,6 +1,6 @@
 // src/components/attendance/PromoTimer.js
 import React, { useEffect, useRef, useState } from 'react';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 const PromoTimer = ({ titleText = "🎯 Limited Time Promo!" }) => {
   const [inputMinutes, setInputMinutes] = useState(1);
@@ -22,12 +22,7 @@ const PromoTimer = ({ titleText = "🎯 Limited Time Promo!" }) => {
     clearInterval(intervalRef.current);
     setIsRunning(false);
     audioRef.current?.play();
-    Swal.fire({
-      icon: 'info',
-      title: '⏰ Time\'s up!',
-      text: 'Your promo timer has ended.',
-      confirmButtonColor: '#3085d6',
-    });
+    toast.info("⏰ Time's up! Your promo timer has ended.");
   };
 
   const startTimer = () => {

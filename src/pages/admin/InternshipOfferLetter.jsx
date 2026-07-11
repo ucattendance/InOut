@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Container, Typography, TextField, Button, FormControl, InputLabel, Select, MenuItem, CircularProgress, List, ListItem, ListItemText, ListItemSecondaryAction } from '@mui/material';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import letterheadUrl from '../../assets/letterhead.pdf';
 import { shrinkLetterheadPhoneIconOnAllPages } from '../../utils/letterheadFooter';
 import { sanitizeTextForStandardFonts } from '../../utils/pdfTextSanitizer';
@@ -302,7 +302,7 @@ Authorized Signatory`;
   setPdfUrl(URL.createObjectURL(blob));
     } catch (err) {
       console.error('PDF generation error', err);
-      Swal.fire({ icon: 'error', title: 'Failed', text: 'Failed to generate PDF. See console for details.' });
+      toast.error('Failed: Failed to generate PDF. See console for details.');
     } finally {
       setGenerating(false);
     }
@@ -367,11 +367,11 @@ Authorized Signatory`;
         if (pdfBytesData) {
           const { uploadLetterBytes } = await import('../../utils/uploadLetter');
           await uploadLetterBytes(pdfBytesData, `${form.candidateName || 'internship-offer'}.pdf`, selected || undefined);
-          Swal.fire({ icon: 'success', title: 'Saved', text: 'Letter uploaded to cloud', timer: 1300, showConfirmButton: false });
+          toast.success('Saved: Letter uploaded to cloud');
         }
       } catch (err) {
         console.error('Upload failed', err);
-        Swal.fire({ icon: 'warning', title: 'Upload failed', text: 'Letter could not be uploaded to cloud. Download will continue.' });
+        toast.warning('Upload failed: Letter could not be uploaded to cloud. Download will continue.');
       } finally {
         const a = document.createElement('a'); a.href = pdfUrl; a.download = `${form.candidateName || 'internship-offer'}.pdf`; a.click();
       }

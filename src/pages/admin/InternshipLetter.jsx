@@ -7,7 +7,7 @@ import {
   Button
 } from '@mui/material';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 import letterheadUrl from '../../assets/letterhead.pdf';
 import { shrinkLetterheadPhoneIconOnAllPages } from '../../utils/letterheadFooter';
 import { sanitizeTextForStandardFonts } from '../../utils/pdfTextSanitizer';
@@ -335,7 +335,7 @@ Sincerely,`;
       setPdfBytesData(pdfBytes);
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       setPdfUrl(URL.createObjectURL(blob));
-    } catch (err) { console.error('PDF generation error', err); Swal.fire({ icon: 'error', title: 'Failed', text: 'Failed to generate PDF. See console for details.' }); } finally { setGenerating(false); }
+    } catch (err) { console.error('PDF generation error', err); toast.error('Failed: Failed to generate PDF. See console for details.'); } finally { setGenerating(false); }
   };
 
   const downloadPdf = () => {
@@ -347,7 +347,7 @@ Sincerely,`;
           const file = new File([pdfBytesData], `${form.studentName || 'internship-certificate'}.pdf`, { type: 'application/pdf' });
           const { uploadLetterBytes } = await import('../../utils/uploadLetter');
           await uploadLetterBytes(pdfBytesData, `${form.studentName || 'internship-certificate'}.pdf`);
-          Swal.fire({ icon: 'success', title: 'Saved', text: 'Letter uploaded to cloud', timer: 1300, showConfirmButton: false });
+          toast.success('Saved: Letter uploaded to cloud');
         }
       } catch (err) {
         console.error('Upload failed', err);
