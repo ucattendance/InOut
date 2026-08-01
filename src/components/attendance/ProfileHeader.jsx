@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { API_ENDPOINTS } from '../../utils/api';
 import urbancodeLogo from '../../assets/uclogo.png';
 import jobzenterLogo from '../../assets/jzlogo.png';
-import { FiBell } from 'react-icons/fi';
+import { FiBell, FiSun, FiMoon } from 'react-icons/fi';
 
-function ProfileHeader() {
+function ProfileHeader({ theme, toggleTheme }) {
   const [user, setUser] = useState(null);
   const token = localStorage.getItem('token');
 
@@ -23,7 +23,7 @@ function ProfileHeader() {
         const decoded = JSON.parse(atob(token.split('.')[1]));
         const userId = decoded.userId;
 
-        const currentUser = users.find(u => u._id === userId);
+        const currentUser = users.find((u) => u._id === userId);
         setUser(currentUser);
       } catch (err) {
         console.error('Error loading user:', err.message);
@@ -46,41 +46,53 @@ function ProfileHeader() {
     }
   };
 
-  const getAvatarUrl = (user) => {
-    if (!user) return getCompanyLogo(user && user.company);
-    const p = user.profilePic;
-    // support string URL or cloudinary-style object { url | secure_url }
+  const getAvatarUrl = (u) => {
+    if (!u) return getCompanyLogo(null);
+    const p = u.profilePic;
     if (typeof p === 'string' && p.trim()) return p;
     if (p && typeof p === 'object') return p.secure_url || p.url || p.secureUrl || '';
-    return getCompanyLogo(user.company);
+    return getCompanyLogo(u.company);
   };
 
+  const firstName = (user.name || 'there').split(' ')[0];
+
   return (
-    <div className="bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-800 dark:via-gray-800 dark:to-gray-800 border border-gray-200 dark:border-gray-700 shadow rounded-xl px-5 py-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full border border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 p-1">
+    <div className="att-profile-header">
+      <div className="att-profile-left">
+        <div className="att-avatar-wrap">
           <img
             src={getAvatarUrl(user)}
             alt={user.name || user.company}
-            className="w-full h-full object-cover rounded-full"
+            className="att-avatar"
           />
         </div>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{user.name}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{user.position || 'Employee'}</p>
-          <div className="flex items-center gap-3">
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{user.company}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">•</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">ID: <span className="font-medium text-gray-700 dark:text-gray-300">{user.employeeId || '-'}</span></p>
-          </div>
+        <div className="att-profile-text">
+          <h2 className="att-greeting">
+            Hi, {user.name || firstName} <span aria-hidden>👋</span>
+          </h2>
+          <p className="att-position">{user.position || 'Employee'}</p>
+          <p className="att-meta">
+            {user.company || 'UrbanCode'}
+            {user.employeeId ? ` - ID: ${user.employeeId}` : ''}
+          </p>
         </div>
       </div>
 
-      <div className="hidden sm:flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xl">
-        <FiBell
-          className="hover:text-blue-600 transition-colors duration-150 cursor-pointer"
-          title="Notifications"
-        />
+      <div className="att-profile-actions">
+        <button type="button" className="att-icon-btn" title="Notifications">
+          <FiBell />
+          <span className="att-badge">3</span>
+        </button>
+        {typeof toggleTheme === 'function' && (
+          <button
+            type="button"
+            className="att-icon-btn"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <FiSun /> : <FiMoon />}
+          </button>
+        )}
       </div>
     </div>
   );

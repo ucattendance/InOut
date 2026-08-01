@@ -16,12 +16,13 @@ import {
   FiCalendar,
   FiLogOut,
   FiX,
-  FiSun,
-  FiMoon,
+  FiGrid,
+  FiMoreHorizontal,
 } from "react-icons/fi";
 
 import { API_ENDPOINTS, logoutUser } from "../../utils/api";
 import { useTheme } from "../../utils/useTheme";
+import { useShake } from "../../utils/useShake";
 import ProfileHeader from "../../components/attendance/ProfileHeader";
 import DateStrip from "../../components/attendance/DateStrip";
 import AttendanceCards from "../../components/attendance/AttendanceCards";
@@ -55,12 +56,27 @@ function AttendancePage() {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const isCapturingRef = useRef(false);
+  const typeRef = useRef(null);
+  const showCalendarModalRef = useRef(false);
 
   useEffect(() => {
     fetchUser();
     fetchAttendance();
     fetchHolidays();
   }, [userId]);
+
+  useEffect(() => {
+    isCapturingRef.current = isCapturing;
+  }, [isCapturing]);
+
+  useEffect(() => {
+    typeRef.current = type;
+  }, [type]);
+
+  useEffect(() => {
+    showCalendarModalRef.current = showCalendarModal;
+  }, [showCalendarModal]);
 
   const fetchHolidays = async () => {
     const token = localStorage.getItem("token");
@@ -145,6 +161,55 @@ function AttendancePage() {
     } catch (err) {
       toast.error("Camera Access Denied: Please enable your camera and refresh the page.");
       setIsCapturing(false);
+    }
+  };
+
+  const openAttendanceCamera = () => {
+    if (!isSelf) return;
+    if (!typeRef.current) {
+      toast.info("Already done for today — check-in & check-out complete.");
+      return;
+    }
+    if (isCapturingRef.current || showCalendarModalRef.current) return;
+    getLocation();
+    startCamera();
+  };
+
+  const {
+    needsPermission: needsShakePermission,
+    requestPermission: requestShakePermission,
+    permission: shakePermission,
+    isDesktop,
+  } = useShake({
+    enabled: isSelf && !!type && !isCapturing && !showCalendarModal,
+    onShake: () => {
+      const desktop = !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+      toast.info(
+        typeRef.current === "check-out"
+          ? desktop
+            ? "Opening Check Out camera — press S / Space"
+            : "Shake detected — opening Check Out camera"
+          : desktop
+            ? "Opening Check In camera — press S / Space"
+            : "Shake detected — opening Check In camera",
+        { autoClose: 1500 }
+      );
+      openAttendanceCamera();
+    },
+  });
+
+  const enableShake = async () => {
+    const ok = await requestShakePermission();
+    if (ok) {
+      toast.success(
+        isDesktop
+          ? "Ready — press S or Space to open camera"
+          : "Shake enabled — shake phone to open camera"
+      );
+    } else if (shakePermission === "unsupported") {
+      toast.warning("Shake not supported — press S or Space on keyboard");
+    } else {
+      toast.error("Motion permission denied — use the Check In / Out button");
     }
   };
 
@@ -344,79 +409,57 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-lime-50 via-sky-50 to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 px-4 py-6 md:py-10 max-w-4xl mx-auto font-sans">
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={toggleTheme}
-          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          className="flex items-center justify-center p-2 rounded-full border border-gray-300 dark:border-gray-600 bg-white/70 dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm hover:bg-white dark:hover:bg-gray-700 transition leading-none"
-        >
-          {theme === "dark" ? <FiSun className="w-4 h-4 shrink-0" /> : <FiMoon className="w-4 h-4 shrink-0" />}
+    <div className="att-page">
+      <ProfileHeader theme={theme} toggleTheme={toggleTheme} />
+
+      <div className="att-stats">
+        <div className="att-stat-card">
+          <span className="att-stat-icon att-stat-green"><FiCheckCircle /></span>
+          <span className="att-stat-value att-stat-green">{presentDays}</span>
+          <span className="att-stat-label">Present</span>
+        </div>
+        <div className="att-stat-card">
+          <span className="att-stat-icon att-stat-red"><FiXCircle /></span>
+          <span className="att-stat-value att-stat-red">{absentDays}</span>
+          <span className="att-stat-label">Leaves</span>
+        </div>
+        <div className="att-stat-card">
+          <span className="att-stat-icon att-stat-orange"><FiClock /></span>
+          <span className="att-stat-value att-stat-orange">{partialAttendanceDays}</span>
+          <span className="att-stat-label">Partial</span>
+        </div>
+        <div className="att-stat-card">
+          <span className="att-stat-icon att-stat-blue"><FiBarChart2 /></span>
+          <span className="att-stat-value att-stat-blue">{fullAttendanceDays}</span>
+          <span className="att-stat-label">Total</span>
+        </div>
+      </div>
+
+      <div className="att-quick">
+        <button type="button" className="att-quick-btn" onClick={() => navigate("/apply-leave")}>
+          <span className="att-quick-icon orange"><FiFileText /></span>
+          <span className="att-quick-label">Apply Leave</span>
         </button>
-      </div>
-      <div >
-        <ProfileHeader
-          name={user.name}
-          position={user.position}
-          company={user.company}
-
-        /></div>
-
-      <div className="mt-4 mb-4 flex justify-around text-sm font-medium text-gray-700 dark:text-gray-300">
-        <div className="flex items-center gap-1">
-          <FiCheckCircle className="text-green-600 dark:text-green-400" /> Present: <span className="text-green-600 dark:text-green-400">{presentDays}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <FiXCircle className="text-red-600 dark:text-red-400" /> Leaves: <span className="text-red-600 dark:text-red-400">{absentDays}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <FiClock className="text-yellow-600 dark:text-yellow-400" /> Partial: <span className="text-yellow-600 dark:text-yellow-400">{partialAttendanceDays}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <FiBarChart2 className="text-blue-600 dark:text-blue-400" /> Total: <span className="text-blue-600 dark:text-blue-400">{fullAttendanceDays}</span>
-        </div>
-      </div>
-
-      <div className="flex flex-col md:flex-row md:justify-between items-stretch md:items-center gap-3 mb-4">
-        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-          <button
-            onClick={() => navigate("/apply-leave")}
-            className="bg-yellow-500 text-white px-4 py-2 rounded shadow hover:bg-yellow-600 w-full sm:w-auto flex items-center justify-center gap-2"
-          >
-            <FiFileText /> Apply Leave
-          </button>
-          <button
-            onClick={() => navigate("/profile")}
-            className="bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600 w-full sm:w-auto flex items-center justify-center gap-2"
-          >
-            <FiUser /> My Profile
-          </button>
-          {/* <button
-            onClick={() => navigate("/task-manager")}
-            className="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 w-full sm:w-auto"
-          >
-            🗂 Task Manager
-          </button> */}
-          <button
-            onClick={() => setShowCalendarModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 w-full sm:w-auto flex items-center justify-center gap-2"
-          >
-            <FiCalendar /> Open Calendar View
-          </button>
-        </div>
-        <button
-          onClick={onLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600 w-full sm:w-auto flex items-center justify-center gap-2"
-        >
-          <FiLogOut /> Logout
+        <button type="button" className="att-quick-btn" onClick={() => navigate("/profile")}>
+          <span className="att-quick-icon green"><FiUser /></span>
+          <span className="att-quick-label">My Profile</span>
+        </button>
+        <button type="button" className="att-quick-btn" onClick={() => setShowCalendarModal(true)}>
+          <span className="att-quick-icon blue"><FiCalendar /></span>
+          <span className="att-quick-label">Calendar View</span>
+        </button>
+        <button type="button" className="att-quick-btn" onClick={onLogout}>
+          <span className="att-quick-icon red"><FiLogOut /></span>
+          <span className="att-quick-label">Logout</span>
         </button>
       </div>
 
       {showCalendarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-          <div className="bg-white dark:bg-gray-800 dark:text-gray-100 p-6 rounded-xl shadow-lg max-w-lg w-full relative">
+        <div className="att-modal-backdrop">
+          <div className="att-modal">
             <button
-              className="absolute top-2 right-2 text-gray-500 dark:text-gray-400 text-2xl hover:text-black dark:hover:text-white"
+              type="button"
+              className="att-modal-close"
               onClick={() => setShowCalendarModal(false)}
             >
               <FiX />
@@ -431,7 +474,6 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
               className="m-auto p-4 rounded-lg"
               onChange={(date) => {
                 setSelectedDate(date);
-                
               }}
               value={selectedDate}
               onActiveStartDateChange={({ activeStartDate }) =>
@@ -439,10 +481,9 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
               }
               tileClassName={({ date, view }) => {
                 if (view === "month") {
-                  const now = new Date();
-                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  const nowLocal = new Date();
+                  const today = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate());
 
-                  // Don't show status for future dates
                   if (date > today) return "";
 
                   const key = date.toDateString();
@@ -453,45 +494,25 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                   else if (record?.checkin && !record?.checkout) className = "partial-present";
                   else if (date < today) className = "absent-day";
 
-                  // Add hover class if there's a record
                   if (record) className += " calendar-tile-hover";
 
                   return className;
                 }
                 return "";
               }}
-              // tileContent={({ date, view }) => {
-              //   if (view === "month") {
-              //     const key = date.toDateString();
-              //     const record = attendanceMap[key];
-
-              //     if (record) {
-              //       return (
-              //         <div className="text-[9px] font-medium mt-1">
-              //           {record.inTime && (
-              //             <div className="text-green-600">✓ {new Date(record.inTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-              //           )}
-              //           {record.outTime && (
-              //             <div className="text-blue-600">✗ {new Date(record.outTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-              //           )}
-              //         </div>
-              //       );
-              //     }
-              //   }
-              //   return null;
-              // }}
               tileDisabled={({ date, view }) => {
                 if (view === "month") {
-                  const now = new Date();
-                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                  // Disable future dates from being selected
+                  const nowLocal = new Date();
+                  const today = new Date(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate());
                   return date > today;
                 }
                 return false;
               }}
             />
             <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-2">Selected Date: {selectedDate.toDateString()}</h3>
+              <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                Selected Date: {selectedDate.toDateString()}
+              </h3>
               {(() => {
                 const key = selectedDate.toDateString();
                 const record = attendanceMap[key];
@@ -504,9 +525,9 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                           <span className="text-gray-600">Check-in Time:</span>
                           <span className="font-medium text-green-600">
                             {new Date(record.inTime).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              second: '2-digit'
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
                             })}
                           </span>
                         </div>
@@ -516,9 +537,9 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                           <span className="text-gray-600">Check-out Time:</span>
                           <span className="font-medium text-blue-600">
                             {new Date(record.outTime).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              second: '2-digit'
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
                             })}
                           </span>
                         </div>
@@ -555,52 +576,60 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
         </div>
       )}
 
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3">
-          Today Attendance
-        </h3>
-        <AttendanceCards
-          attendanceData={attendanceHistory}
-          totalWorkingDays={totalWorkingDays}
-          remainingDays={remainingWorkingDays}
-        />
-        <br></br>
-        <ActivityLog activities={filteredLogs} />
-      </div>
-      <div className="mt-8">
-        <DateStrip
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-        />
-      </div>
+      <h3 className="att-section-title">Today Attendance</h3>
+      <AttendanceCards
+        attendanceData={attendanceHistory}
+        totalWorkingDays={totalWorkingDays}
+        remainingDays={remainingWorkingDays}
+      />
+
+      <ActivityLog activities={filteredLogs} />
+
+      <DateStrip
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+      />
+
       {isSelf && type && !isCapturing && (
-        <div className="fixed bottom-6 left-6 right-6 flex justify-center z-30">
+        <>
           <button
-            onClick={() => {
-              getLocation();
-              startCamera();
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition"
+            type="button"
+            className="att-cta"
+            onClick={openAttendanceCamera}
           >
+            <FiCalendar />
             {type === "check-in" ? "Check In" : "Check Out"}
           </button>
-        </div>
+          {needsShakePermission ? (
+            <button type="button" className="att-shake-hint att-shake-enable" onClick={enableShake}>
+              Enable shake to open camera
+            </button>
+          ) : (
+            <p className="att-shake-hint">
+              {isDesktop
+                ? "Desktop: press S or Space to open camera"
+                : "Shake phone to open camera"}
+            </p>
+          )}
+        </>
       )}
 
       {isCapturing && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 dark:text-gray-100 w-full max-w-sm p-6 rounded-2xl shadow-2xl space-y-4 text-center">
+        <div className="att-modal-backdrop">
+          <div className="att-camera-modal space-y-4">
             {!image ? (
               <>
                 <CameraView ref={videoRef} />
                 <div className="flex justify-between mt-4">
                   <button
+                    type="button"
                     onClick={stopCamera}
                     className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
                   >
                     Cancel
                   </button>
                   <button
+                    type="button"
                     onClick={captureImage}
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
                   >
@@ -610,14 +639,15 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
               </>
             ) : (
               <>
-                    <img
+                <img
                   src={image}
                   alt="Captured"
                   className="rounded-lg w-full object-cover"
                 />
-                {/* Optional comment input shown after capture */}
                 <div className="mt-3 text-left">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Comment (optional)
+                  </label>
                   <textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
@@ -635,14 +665,19 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                     </p>
                     {location && (
                       <p>
-                        <span className="font-medium">Location:</span>{" "}
-                        {location}
+                        <span className="font-medium">Location:</span> {location}
                       </p>
                     )}
                     {detectedOffice && (
                       <p>
                         <span className="font-medium">Office:</span>{" "}
-                        <span className={detectedOffice.isInOffice ? "text-green-600 font-semibold" : "text-amber-600"}>
+                        <span
+                          className={
+                            detectedOffice.isInOffice
+                              ? "text-green-600 font-semibold"
+                              : "text-amber-600"
+                          }
+                        >
                           {detectedOffice.officeName}
                         </span>
                       </p>
@@ -651,11 +686,12 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                 )}
                 <div className="flex justify-between mt-4">
                   <button
+                    type="button"
                     onClick={() => {
                       URL.revokeObjectURL(image);
                       setImage(null);
                       setCompressedBlob(null);
-                      setComment('');
+                      setComment("");
                       startCamera();
                     }}
                     className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg"
@@ -663,14 +699,16 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                     Retake
                   </button>
                   <button
+                    type="button"
                     onClick={submitAttendance}
-                    className={`bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
+                    className={`bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg ${
+                      isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    disabled={isSubmitting}
                   >
                     {isSubmitting
                       ? "Submitting..."
-                      : `Submit ${type === "check-in" ? "Check In" : "Check Out"
-                      }`}
+                      : `Submit ${type === "check-in" ? "Check In" : "Check Out"}`}
                   </button>
                 </div>
               </>
@@ -678,6 +716,45 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
           </div>
         </div>
       )}
+
+      <nav className="att-bottom-nav" aria-label="Employee navigation">
+        <button type="button" className="att-nav-item is-active">
+          <FiGrid />
+          Dashboard
+        </button>
+        <button
+          type="button"
+          className="att-nav-item"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        >
+          <FiClock />
+          Attendance
+        </button>
+        <button
+          type="button"
+          className="att-nav-item"
+          onClick={() => setShowCalendarModal(true)}
+        >
+          <FiBarChart2 />
+          Reports
+        </button>
+        <button
+          type="button"
+          className="att-nav-item"
+          onClick={() => navigate("/profile")}
+        >
+          <FiUser />
+          Profile
+        </button>
+        <button
+          type="button"
+          className="att-nav-item"
+          onClick={() => navigate("/task-manager")}
+        >
+          <FiMoreHorizontal />
+          More
+        </button>
+      </nav>
     </div>
   );
 }
