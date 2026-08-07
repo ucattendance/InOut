@@ -65,10 +65,22 @@ export const buildSummaryFromLogs = (logs = [], users = [], dateFilter) => {
   const presentIds = presentEmployeeIds(dayLogs);
   const presentToday = presentIds.size;
   const totalEmployees = employees.length;
+
+  let checkDate = new Date();
+  if (dateFilter) {
+    const m = String(dateFilter).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    checkDate = m
+      ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+      : new Date(dateFilter);
+  }
+  const isOfficeLeave = !Number.isNaN(checkDate.getTime()) &&
+    (checkDate.getDay() === 0 || checkDate.getDay() === 6);
+
   return {
     totalEmployees,
     presentToday,
-    absentToday: Math.max(0, totalEmployees - presentToday),
+    onLeaveToday: 0,
+    absentToday: isOfficeLeave ? 0 : Math.max(0, totalEmployees - presentToday),
   };
 };
 
@@ -82,15 +94,31 @@ export const enrichLogNames = (logs = [], users = []) => {
   );
 
   return logs.map((log) => {
-    const name = log.employeeName || log.name;
-    if (name && name !== 'Unknown') return log;
-
     const user =
       byId.get(normalizeId(log.userId)) ||
-      (log.employeeId ? byEmpId.get(String(log.employeeId).trim()) : null);
+      (log.employeeId ? byEmpId.get(String(log.employeeId).trim()) : null) ||
+      byId.get(normalizeId(log.user));
 
-    if (!user) return log;
-    return { ...log, employeeName: user.name, name: user.name, userId: user._id };
+    if (!user) {
+      const name = log.employeeName || log.name;
+      if (name && name !== 'Unknown') return log;
+      return log;
+    }
+
+    const profilePic =
+      typeof user.profilePic === 'string'
+        ? user.profilePic
+        : user.profilePic?.secure_url || user.profilePic?.url || log.profilePic || '';
+
+    return {
+      ...log,
+      employeeName: user.name || log.employeeName || log.name || 'Unknown',
+      name: user.name || log.name || 'Unknown',
+      userId: user._id || log.userId,
+      employeeId: user.employeeId || log.employeeId || '',
+      profilePic,
+      company: user.company || log.company || '',
+    };
   });
 };
 

@@ -68,6 +68,7 @@ export const API_ENDPOINTS = {
   createUser: `${BASE_URL}/api/admin/create-user`,
   approveUser: `${BASE_URL}/api/admin/approve`,     // Use: `${approveUser}/${userId}`
   rejectUser: `${BASE_URL}/api/admin/reject`,       // Use: `${rejectUser}/${userId}`
+  unlockAttendance: (userId) => `${BASE_URL}/api/admin/users/${userId}/unlock-attendance`,
 
   // -----------------
   // Leave Management

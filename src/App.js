@@ -42,6 +42,7 @@ import InternshipOfferLetter from './pages/admin/InternshipOfferLetter';
 import AllLetters from './pages/admin/AllLetters';
 import UploadDocuments from './pages/admin/UploadDocuments';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 import PendingUsers from './pages/admin/PendingUsers';
 import ApiDocsPage from './pages/admin/ApiDocsPage';
 
@@ -77,9 +78,9 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/attendance" element={<AttendancePage />} />
+        <Route path="/attendance" element={<ProtectedRoute><AttendancePage /></ProtectedRoute>} />
         <Route path="/attendance/:userId" element={<AttendancePage />} />
-        <Route path="/apply-leave" element={<Leave />} />
+        <Route path="/apply-leave" element={<ProtectedRoute><Leave /></ProtectedRoute>} />
         <Route path="/task-manager" element={<TaskManagerPage />} />
         <Route path="/profile" element={<ProfileCard/>} />
         <Route path="/swagger.html" element={<ApiDocsPage />} />

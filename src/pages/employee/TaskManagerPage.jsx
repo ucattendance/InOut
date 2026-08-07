@@ -6,7 +6,19 @@ import { toast } from 'react-toastify';
 import { promptToast } from '../../utils/interactiveToast';
 import { API_ENDPOINTS } from '../../utils/api';
 import { useNavigate } from 'react-router-dom';
+import {
+  FiArrowLeft,
+  FiCalendar,
+  FiCheckCircle,
+  FiClipboard,
+  FiEdit2,
+  FiPlus,
+  FiTrash2,
+  FiBarChart2,
+  FiMapPin,
+} from 'react-icons/fi';
 import PromoTimer from '../../components/attendance/PromoTimer';
+import './TaskManagerPage.css';
 
 const TaskManagerPage = () => {
   const navigate = useNavigate();
@@ -16,6 +28,7 @@ const TaskManagerPage = () => {
   const [summary, setSummary] = useState({ total: 0, done: 0, pending: 0 });
 
   const formattedDate = selectedDate.toISOString().split('T')[0];
+  const dayNum = String(selectedDate.getDate()).padStart(2, '0');
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -115,91 +128,132 @@ const TaskManagerPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-pink-50 via-yellow-50 to-sky-50 py-10 px-4 font-sans">
-      <div className="flex justify-between">
-        <button
-          type="button"
-          onClick={() => navigate('/attendance')}
-          className="bg-gray-200 text-gray-800 px-5 py-2 rounded-xl hover:bg-gray-300 transition"
-        >
-          Back
-        </button>
-      </div>
-      <h1 className="text-3xl font-bold text-center mb-6 text-indigo-700">🗓️ Task Manager</h1>
+    <div className="tm-page">
+      <div className="tm-wrap">
+        <header className="tm-header">
+          <button
+            type="button"
+            onClick={() => navigate('/attendance')}
+            className="tm-back"
+          >
+            <FiArrowLeft />
+            Back
+          </button>
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-lg p-4">
-          <Calendar onChange={setSelectedDate} value={selectedDate} className="rounded" />
-          <div className="mt-4 space-y-2 text-sm text-gray-600">
-            <div>📅 Selected: <strong>{formattedDate}</strong></div>
-            <div>✅ Done: <strong>{summary.done}</strong></div>
-            <div>📌 Pending: <strong>{summary.pending}</strong></div>
-            <div>📊 Total: <strong>{summary.total}</strong></div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-700 mb-4">Tasks for {formattedDate}</h2>
-
-          <div className="flex mb-4 gap-2">
-            <input
-              type="text"
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              placeholder="Add new task..."
-              className="border px-3 py-2 rounded-lg flex-1 shadow-inner"
-            />
-            <button
-              onClick={addTask}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow"
-            >
-              ➕ Add
-            </button>
+          <div className="tm-title-block">
+            <div className="tm-brand">
+              <span className="tm-brand-icon" aria-hidden>
+                <span>CAL</span>
+                <strong>{dayNum}</strong>
+              </span>
+              <h1>Task Manager</h1>
+            </div>
+            <p className="tm-subtitle">Organize your tasks and stay productive.</p>
           </div>
 
-          {tasks.length === 0 ? (
-            <p className="text-gray-500 text-sm">No tasks for this day.</p>
-          ) : (
-            <ul className="space-y-3">
-              {tasks.map(task => (
-                <li
-                  key={task._id}
-                  className={`flex items-start justify-between p-3 rounded-lg border shadow-sm ${
-                    task.done ? 'bg-green-50' : 'bg-yellow-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={task.done}
-                      onChange={() => toggleTask(task._id, task.done)}
-                      className="mt-1"
-                    />
-                    <div>
-                      <p className={`font-medium ${task.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                        {task.task}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        🕒 {new Date(task.createdAt).toLocaleTimeString()} | 📅 {new Date(task.createdAt).toLocaleDateString()}
-                      </p>
+          <div className="tm-header-spacer" aria-hidden />
+        </header>
+
+        <div className="tm-grid">
+          <section className="tm-card">
+            <Calendar onChange={setSelectedDate} value={selectedDate} />
+            <div className="tm-stats">
+              <div className="tm-stat">
+                <span className="tm-stat-icon purple"><FiCalendar /></span>
+                <span>Selected: <strong>{formattedDate}</strong></span>
+              </div>
+              <div className="tm-stat">
+                <span className="tm-stat-icon green"><FiCheckCircle /></span>
+                <span>Done: <strong>{summary.done}</strong></span>
+              </div>
+              <div className="tm-stat">
+                <span className="tm-stat-icon orange"><FiMapPin /></span>
+                <span>Pending: <strong>{summary.pending}</strong></span>
+              </div>
+              <div className="tm-stat">
+                <span className="tm-stat-icon blue"><FiBarChart2 /></span>
+                <span>Total: <strong>{summary.total}</strong></span>
+              </div>
+            </div>
+          </section>
+
+          <section className="tm-card">
+            <div className="tm-tasks-head">
+              <FiClipboard className="tm-tasks-head-icon" />
+              <h2>Tasks for {formattedDate}</h2>
+            </div>
+
+            <div className="tm-add-row">
+              <input
+                type="text"
+                value={newTask}
+                onChange={(e) => setNewTask(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addTask();
+                }}
+                placeholder="Add new task..."
+              />
+              <button type="button" onClick={addTask} className="tm-add-btn">
+                <FiPlus /> Add
+              </button>
+            </div>
+
+            {tasks.length === 0 ? (
+              <div className="tm-empty">
+                <div className="tm-empty-art" aria-hidden>
+                  <FiClipboard />
+                </div>
+                <p>No tasks for this day.</p>
+                <span>Add a new task to get started!</span>
+              </div>
+            ) : (
+              <ul className="tm-task-list">
+                {tasks.map((task) => (
+                  <li
+                    key={task._id}
+                    className={`tm-task-item${task.done ? ' is-done' : ''}`}
+                  >
+                    <div className="tm-task-left">
+                      <input
+                        type="checkbox"
+                        checked={task.done}
+                        onChange={() => toggleTask(task._id, task.done)}
+                      />
+                      <div>
+                        <p className="tm-task-name">{task.task}</p>
+                        <p className="tm-task-meta">
+                          {new Date(task.createdAt).toLocaleTimeString()} |{' '}
+                          {new Date(task.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <button onClick={() => updateTask(task._id, task.task)} className="text-indigo-600 hover:text-indigo-800 text-sm">
-                      ✏️
-                    </button>
-                    <button onClick={() => deleteTask(task._id)} className="text-red-500 hover:text-red-700 text-sm">
-                      🗑
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                    <div className="tm-task-actions">
+                      <button
+                        type="button"
+                        className="tm-icon-btn edit"
+                        onClick={() => updateTask(task._id, task.task)}
+                        aria-label="Edit task"
+                      >
+                        <FiEdit2 />
+                      </button>
+                      <button
+                        type="button"
+                        className="tm-icon-btn delete"
+                        onClick={() => deleteTask(task._id)}
+                        aria-label="Delete task"
+                      >
+                        <FiTrash2 />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
-      </div>
 
-      <PromoTimer initialMinutes={1} />
+        <PromoTimer variant="taskManager" titleText="Limited Time Promo!" />
+      </div>
     </div>
   );
 };

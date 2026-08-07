@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { API_ENDPOINTS } from "../../utils/api";
-import { Sync, Home as WFHIcon } from '@mui/icons-material';
+import { FiRefreshCw, FiHome as WFHIcon } from 'react-icons/fi';
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import html2pdf from 'html2pdf.js';
@@ -36,22 +36,17 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import {
-  EventAvailable as PresentIcon,
-  EventBusy as AbsentIcon,
-  Event as LeaveIcon,
-  Schedule as TimeIcon,
-  Person as PersonIcon,
-  Business as CompanyIcon,
-  Work as PositionIcon,
-  CalendarToday as CalendarIcon,
-  Search as SearchIcon,
-  WorkOutline as WorkDaysIcon,
-  AccessTime as ScheduledIcon,
-  Warning as LateIcon,
-  AlarmOn as EarlyIcon
-} from "@mui/icons-material";
+  FiCheckCircle as PresentIcon,
+  FiXCircle as AbsentIcon,
+  FiCalendar as LeaveIcon,
+  FiUser as PersonIcon,
+  FiBriefcase as WorkDaysIcon,
+  FiAlertTriangle as LateIcon,
+  FiClock as EarlyIcon,
+  FiSearch as SearchIcon,
+  FiMessageSquare as CommentIcon,
+} from "react-icons/fi";
 
-import CommentIcon from '@mui/icons-material/Comment';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -259,7 +254,8 @@ const resolveEmployeeContext = (employeeName, schedules, allUsers, logs) => {
 };
 
 const isScheduledWorkDay = (dateObj, weeklySchedule, isHolidayDate) => {
-  if (isHolidayDate || dateObj.getDay() === 0) return false;
+  // Sat + Sun are office weekly offs by default
+  if (isHolidayDate || dateObj.getDay() === 0 || dateObj.getDay() === 6) return false;
 
   const norm = normalizeWeeklySchedule(weeklySchedule);
   const hasConfig = Object.keys(norm).length > 0;
@@ -269,6 +265,10 @@ const isScheduledWorkDay = (dateObj, weeklySchedule, isHolidayDate) => {
   if (daySchedule === undefined) return false;
   return !daySchedule.isLeave;
 };
+
+/** Weekend + schedule.isLeave = office weekly off (not personal leave). */
+const isOfficeLeaveDay = (dateObj, scheduled) =>
+  dateObj.getDay() === 0 || dateObj.getDay() === 6 || !!scheduled?.isLeave;
 
 /** Active employee — same rule as All Users (not past / disabled). */
 const isActiveEmployee = (user) => {
@@ -564,14 +564,14 @@ const Report = () => {
           status = getHolidayName(dateObj) || 'Holiday';
         } else if (approvedLeave) {
           status = `Leave (${approvedLeave.leaveType || 'Approved'})`;
-        } else if (scheduled?.isLeave && checkIn) {
+        } else if (isOfficeLeaveDay(dateObj, scheduled) && checkIn) {
           const presentType = isPhysicalOfficePresent(checkIn.officeName) ? 'Present' : 'WFH';
-          status = `${presentType} (Scheduled Leave)`;  // Mark both Present and Scheduled Leave
-        } else if (scheduled?.isLeave) {
-          status = 'Leave';
+          status = `${presentType} (Office Leave)`;
+        } else if (isOfficeLeaveDay(dateObj, scheduled)) {
+          status = (dateObj.getDay() === 0 || dateObj.getDay() === 6) ? 'Office Leave' : 'Leave';
         } else if (checkIn) {
           status = isPhysicalOfficePresent(checkIn.officeName) ? 'Present' : 'WFH';
-        } else if (dateObj.getDay() !== 0 && scheduled && !scheduled.isLeave) {
+        } else if (scheduled && !scheduled.isLeave) {
           status = 'Absent';
         }
 
@@ -675,8 +675,11 @@ const Report = () => {
       if (isHolidayDate) {
         holidayCount++;
       }
-      else if (scheduled?.isLeave || isOnApprovedLeave(employee, dateObj)) {
+      else if (isOnApprovedLeave(employee, dateObj)) {
         leaveCount++;
+      }
+      else if (isOfficeLeaveDay(dateObj, scheduled)) {
+        // Sunday / scheduled weekly off — not personal leave, not absent
       }
       else if (checkIn && !checkOut) {
         // ✅ CHECK-IN WITHOUT CHECK-OUT
@@ -813,7 +816,7 @@ const Report = () => {
                   /* ignore */
                 }
                 setDataFetchNonce((n) => n + 1);
-              }}><Sync/>
+              }}><FiRefreshCw style={{ marginRight: 6 }} />
                 Refresh Data
                 
               </Button>
@@ -879,85 +882,87 @@ const Report = () => {
                         {/* Employee Summary Section */}
                         <Grid container spacing={3} mb={4}>
                           <Grid size={{ xs: 12, md: 4 }}>
-                            <Stack direction="row" spacing={3} alignItems="center" flexWrap="wrap">
-                              <Avatar sx={{ width: 60, height: 60 }}>
-                                <PersonIcon fontSize="large" />
-                              </Avatar>
-                              <Box>
-                                <Typography variant="h5">{employee}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {position}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {company}
-                                </Typography>
-                                {branchLabel && (
-                                  <Chip
-                                    label={branchLabel}
-                                    size="small"
-                                    sx={{ mt: 0.5 }}
-                                    color={
-                                      branchLabel === 'Chennai Velachery'
-                                        ? 'primary'
-                                        : branchLabel === 'Chennai Pallikarani'
-                                          ? 'success'
-                                          : 'warning'
-                                    }
-                                    variant="outlined"
-                                  />
-                                )}
-                              </Box>
-                              <Paper elevation={1} sx={{ p: 2, minWidth: 140, border: '1px solid #ddd', textAlign: 'center' }}>
+                            <Stack spacing={2}>
+                              <Stack direction="row" spacing={3} alignItems="center">
+                                <Avatar sx={{ width: 60, height: 60 }}>
+                                  <PersonIcon size={36} />
+                                </Avatar>
+                                <Box>
+                                  <Typography variant="h5">{employee}</Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {position}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {company}
+                                  </Typography>
+                                  {branchLabel && (
+                                    <Chip
+                                      label={branchLabel}
+                                      size="small"
+                                      sx={{ mt: 0.5 }}
+                                      color={
+                                        branchLabel === 'Chennai Velachery'
+                                          ? 'primary'
+                                          : branchLabel === 'Chennai Pallikarani'
+                                            ? 'success'
+                                            : 'warning'
+                                      }
+                                      variant="outlined"
+                                    />
+                                  )}
+                                </Box>
+                              </Stack>
+
+                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                <Paper
+                                  elevation={1}
+                                  sx={{
+                                    p: 2,
+                                    flex: 1,
+                                    minWidth: 0,
+                                    border: '1px solid #ddd',
+                                    textAlign: 'center',
+                                  }}
+                                >
                                   <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
-                                    <WorkDaysIcon color="action" />
+                                    <WorkDaysIcon color="#757575" size={22} />
                                     <Typography variant="h6">
                                       {scheduledWorkingDays}
                                     </Typography>
                                   </Stack>
                                   <Typography variant="body2">Scheduled Work Days</Typography>
                                 </Paper>
-                              <Paper elevation={1} sx={{ p: 2, minWidth: 120, border: '1px solid #ddd', textAlign: 'center' }}>
+                                <Paper
+                                  elevation={1}
+                                  sx={{
+                                    p: 2,
+                                    flex: 1,
+                                    minWidth: 0,
+                                    border: '1px solid #ddd',
+                                    textAlign: 'center',
+                                  }}
+                                >
                                   <Typography variant="h6" color="error">
                                     {absentCount}
                                   </Typography>
                                   <Typography variant="body2">Absent Days</Typography>
                                 </Paper>
+                              </Stack>
                             </Stack>
-
-                            {/* {weeklySchedule && (
-                        <Paper elevation={2} sx={{ mt: 2, p: 2 }}>
-                          <Typography variant="subtitle2" gutterBottom>
-                            <ScheduledIcon color="primary" sx={{ fontSize: 16, mr: 1 }} />
-                            Weekly Schedule
-                          </Typography>
-                          <List dense>
-                            {Object.entries(weeklySchedule).map(([day, time]) => (
-                              <ListItem key={day} sx={{ py: 0 }}>
-                                <ListItemText
-                                  primary={`${day}: ${time.isLeave ? 'Leave' : `${time.start} - ${time.end}`}`}
-                                  primaryTypographyProps={{ variant: 'body2' }}
-                                />
-                              </ListItem>
-                            ))}
-                          </List>
-                        </Paper>
-                      )} */}
                           </Grid>
 
                           <Grid size={{ xs: 12, md: 8 }}>
                             <Grid container spacing={2}>
-
                               <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, textAlign: "center", border: '1px solid #ddd' }}>
+                                <Paper elevation={1} sx={{ p: 2, height: '100%', textAlign: "center", border: '1px solid #ddd' }}>
                                   <Typography variant="h6" color="primary">
                                     {presentCount}
                                   </Typography>
                                   <Typography variant="body2">Present Days</Typography>
                                 </Paper>
                               </Grid>
-                            
                               <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, border: '1px solid #ddd', textAlign: "center" }}>
+                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
                                   <Typography variant="h6" sx={{ color: '#7c3aed' }}>
                                     {holidayCount}
                                   </Typography>
@@ -965,7 +970,7 @@ const Report = () => {
                                 </Paper>
                               </Grid>
                               <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, border: '1px solid #ddd', textAlign: "center" }}>
+                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
                                   <Typography variant="h6" color="info.main">
                                     {leaveCount}
                                   </Typography>
@@ -973,16 +978,15 @@ const Report = () => {
                                 </Paper>
                               </Grid>
                               <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, border: '1px solid #ddd', textAlign: "center" }}>
+                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
                                   <Typography variant="h6" color="success.main">
                                     {wfhCount}
                                   </Typography>
                                   <Typography variant="body2">WFH Days</Typography>
                                 </Paper>
                               </Grid>
-
                               <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, border: '1px solid #ddd', textAlign: "center" }}>
+                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
                                   <Typography variant="h6" color={attendancePercentage >= 90 ? "success.main" : "warning.main"}>
                                     {attendancePercentage}%
                                   </Typography>
@@ -990,7 +994,7 @@ const Report = () => {
                                 </Paper>
                               </Grid>
                               <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, border: '1px solid #ddd', textAlign: "center" }}>
+                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
                                   <Typography variant="h6" color="warning.main">
                                     {lateCount}
                                   </Typography>
@@ -998,7 +1002,7 @@ const Report = () => {
                                 </Paper>
                               </Grid>
                               <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, border: '1px solid #ddd', textAlign: "center" }}>
+                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
                                   <Typography variant="h6" color="warning.main">
                                     {earlyCount}
                                   </Typography>
@@ -1006,14 +1010,13 @@ const Report = () => {
                                 </Paper>
                               </Grid>
                               <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, border: '1px solid #ddd', textAlign: "center" }}>
+                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
                                   <Typography variant="h6" color="warning.main">
                                     {incompleteDays}
                                   </Typography>
                                   <Typography variant="body2">Missing Check-Out</Typography>
                                 </Paper>
                               </Grid>
-
                             </Grid>
                           </Grid>
                         </Grid>
@@ -1095,8 +1098,10 @@ const Report = () => {
                                   } else if (approvedLeave) {
                                     status = `Leave (${approvedLeave.leaveType || 'Approved'})`;
                                     statusColor = "info";
-                                  } else if (scheduled?.isLeave) {
-                                    status = "Scheduled Leave";
+                                  } else if (isOfficeLeaveDay(dateObj, scheduled)) {
+                                    status = (dateObj.getDay() === 0 || dateObj.getDay() === 6)
+                                      ? "Office Leave"
+                                      : "Scheduled Leave";
                                     statusColor = "info";
                                   } else if (checkIn && checkOut) {
                                     isWFH = checkIn.officeName && !isPhysicalOfficePresent(checkIn.officeName);
@@ -1149,7 +1154,7 @@ const Report = () => {
                                       <TableCell align="center">{dayName}</TableCell>
                                       <TableCell align="center">
                                         <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-                                          {late && <LateIcon color="warning" fontSize="small" />}
+                                          {late && <LateIcon color="#ed6c02" size={18} />}
 
                                             {/* Show check-in time and tooltip if comment exists */}
                                             {checkIn?.comment ? (
@@ -1158,7 +1163,9 @@ const Report = () => {
                                                   <Typography sx={{ fontSize: "0.9rem" }}>{checkInTime}</Typography>
                                                 </Tooltip>
                                                 <Tooltip title={checkIn.comment} arrow>
-                                                  <CommentIcon fontSize="small" sx={{ color: 'action.active', ml: 0.5 }} />
+                                                  <span style={{ display: 'inline-flex', marginLeft: 4 }}>
+                                                    <CommentIcon size={16} color="#757575" />
+                                                  </span>
                                                 </Tooltip>
                                               </>
                                             ) : (
@@ -1168,7 +1175,7 @@ const Report = () => {
                                       </TableCell>
                                       <TableCell align="center">
                                         <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
-                                          {early && <EarlyIcon color="warning" fontSize="small" />}
+                                          {early && <EarlyIcon color="#ed6c02" size={18} />}
 
                                             {/* Show check-out time and tooltip if comment exists */}
                                             {checkOut?.comment ? (
@@ -1177,7 +1184,9 @@ const Report = () => {
                                                   <Typography sx={{ fontSize: "0.9rem" }}>{checkOutTime}</Typography>
                                                 </Tooltip>
                                                 <Tooltip title={checkOut.comment} arrow>
-                                                  <CommentIcon fontSize="small" sx={{ color: 'action.active', ml: 0.5 }} />
+                                                  <span style={{ display: 'inline-flex', marginLeft: 4 }}>
+                                                    <CommentIcon size={16} color="#757575" />
+                                                  </span>
                                                 </Tooltip>
                                               </>
                                             ) : (
@@ -1190,8 +1199,10 @@ const Report = () => {
                                           ? (holidayName || 'Holiday')
                                           : approvedLeave
                                             ? `Leave (${approvedLeave.leaveType || 'Approved'})`
-                                            : scheduled?.isLeave
-                                              ? 'Scheduled Leave'
+                                            : isOfficeLeaveDay(dateObj, scheduled)
+                                              ? ((dateObj.getDay() === 0 || dateObj.getDay() === 6)
+                                                ? 'Office Leave'
+                                                : 'Scheduled Leave')
                                               : `${scheduled?.start || "—"} - ${scheduled?.end || "—"}`}
                                       </TableCell>
                                       <TableCell align="center">{workHours}</TableCell>
@@ -1204,13 +1215,13 @@ const Report = () => {
                                           sx={{ width: '100px', justifyContent: 'left' }} // Ensure fixed width
                                           icon={
                                             status === "Remote" ? (
-                                              <WFHIcon fontSize="small" />
+                                              <WFHIcon size={16} />
                                             ) : status === "Present" ? (
-                                              <PresentIcon fontSize="small" />
+                                              <PresentIcon size={16} />
                                             ) : status === "Absent" ? (
-                                              <AbsentIcon fontSize="small" />
+                                              <AbsentIcon size={16} />
                                             ) : (
-                                              <LeaveIcon fontSize="small" />
+                                              <LeaveIcon size={16} />
                                             )
                                           }
                                         />

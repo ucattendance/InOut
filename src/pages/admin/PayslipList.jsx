@@ -17,11 +17,11 @@ import {
   CircularProgress
 } from "@mui/material";
 import {
-  Search,
-  FilterList,
-  Download,
-  CalendarMonth
-} from "@mui/icons-material";
+  FiSearch,
+  FiFilter,
+  FiDownload,
+  FiCalendar
+} from "react-icons/fi";
 import { API_ENDPOINTS } from "../../utils/api";
 import Loader from "../../components/admin-dashboard/common/Loader";
 
@@ -164,7 +164,7 @@ const PayslipList = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search />
+                    <FiSearch />
                   </InputAdornment>
                 ),
               }}
@@ -181,7 +181,7 @@ const PayslipList = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <CalendarMonth />
+                    <FiCalendar />
                   </InputAdornment>
                 ),
               }}
@@ -205,7 +205,7 @@ const PayslipList = () => {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <FilterList />
+                    <FiFilter />
                   </InputAdornment>
                 ),
               }}
@@ -252,7 +252,7 @@ const PayslipList = () => {
                 alignItems: 'center'
               }}
             >
-              <CalendarMonth sx={{ mr: 1 }} />
+              <FiCalendar style={{ marginRight: 8 }} />
               {month}
             </Typography>
             
@@ -285,7 +285,7 @@ const PayslipList = () => {
                         <Button
                           variant="contained"
                           color=""
-                          startIcon={<Download />}
+                          startIcon={<FiDownload />}
                           onClick={() => generatePDF(payslip)}
                           fullWidth
                           sx={{ borderRadius: 2 }}

@@ -9,14 +9,13 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
-  CheckCircleOutline as ApprovedIcon,
-  CancelOutlined as RejectedIcon,
-  PendingOutlined as PendingIcon,
-  CalendarToday as CalendarIcon,
-  Person as PersonIcon,
-  KeyboardArrowDown as ExpandIcon,
-  KeyboardArrowUp as CollapseIcon
-} from '@mui/icons-material';
+  FiCheckCircle as ApprovedIcon,
+  FiXCircle as RejectedIcon,
+  FiClock as PendingIcon,
+  FiCalendar as CalendarIcon,
+  FiChevronDown as ExpandIcon,
+  FiChevronUp as CollapseIcon
+} from 'react-icons/fi';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Loader from '../../components/admin-dashboard/common/Loader';
 
@@ -141,9 +140,9 @@ const LeaveRequestsAdmin = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'Approved': return <ApprovedIcon fontSize="small" />;
-      case 'Rejected': return <RejectedIcon fontSize="small" />;
-      default: return <PendingIcon fontSize="small" />;
+      case 'Approved': return <ApprovedIcon size={18} />;
+      case 'Rejected': return <RejectedIcon size={18} />;
+      default: return <PendingIcon size={18} />;
     }
   };
 
@@ -181,7 +180,7 @@ const LeaveRequestsAdmin = () => {
         {sortedMonths.map((month) => (
           <Box key={month} mb={6}>
             <MonthHeader>
-              <CalendarIcon sx={{ mr: 1 }} />
+              <CalendarIcon style={{ marginRight: 8 }} />
               <Typography sx={{ fontWeight: 600 }}>
                 {dayjs(month + '-01').format('MMMM YYYY')}
               </Typography>

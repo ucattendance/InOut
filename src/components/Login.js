@@ -1,6 +1,6 @@
 import React, { useState,useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-toastify';
 
@@ -8,12 +8,24 @@ import { toast } from 'react-toastify';
 // import urbancodeLogo from '../assets/uclogo.png';
 import { API_ENDPOINTS } from '../utils/api';
 
+/** Only allow same-app relative paths (blocks open redirects). */
+function getSafeReturnPath(from, role) {
+  if (typeof from === 'string' && from.startsWith('/') && !from.startsWith('//')) {
+    return from;
+  }
+  if (role === 'admin') return '/dashboard';
+  if (role === 'employee') return '/attendance';
+  return '/';
+}
+
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const returnFrom = location.state?.from;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -26,15 +38,14 @@ function Login() {
         if (isExpired) {
           localStorage.removeItem('token');
         } else {
-          if (decoded.role === 'admin') navigate('/dashboard');
-          else if (decoded.role === 'employee') navigate('/attendance');
+          navigate(getSafeReturnPath(returnFrom, decoded.role), { replace: true });
         }
       } catch (err) {
         console.error('Error decoding token:', err);
         localStorage.removeItem('token');
       }
     }
-  }, []);
+  }, [navigate, returnFrom]);
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -47,13 +58,12 @@ function Login() {
       const token = response.data.token;
       localStorage.setItem('token', token);
       const decoded = jwtDecode(token);
+      const destination = getSafeReturnPath(returnFrom, decoded.role);
 
       toast.success('Welcome! Login successful. Redirecting...');
 
       setTimeout(() => {
-        if (decoded.role === 'admin') navigate('/dashboard');
-        else if (decoded.role === 'employee') navigate('/attendance');
-        else navigate('/');
+        navigate(destination, { replace: true });
       }, 2000);
 
     } catch (err) {

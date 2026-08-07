@@ -584,6 +584,10 @@
   padding: 1rem;
 }
 
+.att-profile-warn-backdrop {
+  z-index: 60;
+}
+
 .att-modal {
   background: var(--att-card);
   color: var(--att-text);
@@ -634,6 +638,11 @@
 
 .absent-day {
   background-color: #fecaca !important;
+  border-radius: 50%;
+}
+
+.leave-day {
+  background-color: #bae6fd !important;
   border-radius: 50%;
 }
 

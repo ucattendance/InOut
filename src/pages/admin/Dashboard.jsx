@@ -4,10 +4,9 @@ import { API_ENDPOINTS } from '../../utils/api';
 import RecentAttendanceTable from '../../components/admin-dashboard/dashboard/RecentAttendanceTable';
 import DashboardCards from '../../components/admin-dashboard/dashboard/DashboardCards';
 import Loader from '../../components/admin-dashboard/common/Loader';
-import { FiSearch, FiCalendar } from 'react-icons/fi';
+import { FiSearch, FiCalendar, FiRefreshCw } from 'react-icons/fi';
 import AbsentUsersList from '../../components/admin-dashboard/dashboard/AbsentUsersList';
 import ReportGenerator from '../../components/admin-dashboard/dashboard/ReportGenerator';
-import { Sync } from '@mui/icons-material';
 import { BRANCH_OPTIONS, logMatchesBranchFilter, matchesBranchFilter } from '../../utils/branches';
 import { isSameLocalDay, localDateYMD } from '../../utils/localDate';
 import {
@@ -16,6 +15,7 @@ import {
   filterLogsByDate,
   normalizeLogs,
 } from '../../utils/dashboardLogs';
+import '../../styles/dashboard-ui.css';
 
 const fetchDashboardLogs = async (dateFilter, headers, users = []) => {
   const datedUrl = `${API_ENDPOINTS.getRecentDashboardLogs}?date=${encodeURIComponent(dateFilter)}&_=${Date.now()}`;
@@ -54,7 +54,7 @@ const Dashboard = () => {
   const [summary, setSummary] = useState(null);
   const [logs, setLogs] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
-  const [allUsers, setAllUsers] = useState([]); 
+  const [allUsers, setAllUsers] = useState([]);
 
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState(() => localDateYMD());
@@ -141,15 +141,15 @@ const Dashboard = () => {
     loadDashboard();
   }, [token, dateFilter, refreshNonce]);
 
-  
-  // Apply filters
-  useEffect(() => { 
+  useEffect(() => {
     let result = [...logs];
 
     if (search.trim()) {
       const keyword = search.toLowerCase();
-      result = result.filter(log =>
-        log.employeeName?.toLowerCase().includes(keyword)
+      result = result.filter(
+        (log) =>
+          log.employeeName?.toLowerCase().includes(keyword) ||
+          String(log.employeeId || '').toLowerCase().includes(keyword)
       );
     }
 
@@ -158,16 +158,16 @@ const Dashboard = () => {
     }
 
     if (typeFilter !== 'all') {
-      result = result.filter(log => log.type === typeFilter);
+      result = result.filter((log) => log.type === typeFilter);
     }
 
     if (locationFilter !== 'all') {
       const isInOffice = locationFilter === 'office';
-      result = result.filter(log => log.isInOffice === isInOffice);
+      result = result.filter((log) => log.isInOffice === isInOffice);
     }
 
     if (companyFilter !== 'all') {
-      result = result.filter(log => log.company === companyFilter);
+      result = result.filter((log) => log.company === companyFilter);
     }
 
     if (filterBranch !== 'All') {
@@ -175,8 +175,8 @@ const Dashboard = () => {
     }
 
     setFilteredLogs(result);
-    
   }, [logs, search, dateFilter, typeFilter, locationFilter, companyFilter, filterBranch, allUsers]);
+
   const logsForSelectedDate = logs.filter((log) => isSameLocalDay(log.timestamp, dateFilter));
 
   const usersForBranch =
@@ -187,9 +187,12 @@ const Dashboard = () => {
   if (loading) return <Loader />;
 
   return (
-    <div className="uc-page">
-      <div className="uc-flex-between">
-        <h1 className="uc-page-title">Today&apos;s Attendance Report</h1>
+    <div className="uc-page dash-page">
+      <div className="dash-page-header">
+        <div>
+          <h1 className="dash-page-title">Today&apos;s Attendance Report</h1>
+          <p className="dash-breadcrumb">Dashboard • Today&apos;s Attendance</p>
+        </div>
         <ReportGenerator
           logs={filteredLogs}
           allUsers={allUsers}
@@ -200,38 +203,26 @@ const Dashboard = () => {
       {summary && <DashboardCards data={summary} />}
 
       {fetchError && (
-        <div
-          role="alert"
-          style={{
-            marginBottom: '1rem',
-            padding: '0.75rem 1rem',
-            borderRadius: '8px',
-            background: '#fef2f2',
-            color: '#b91c1c',
-            border: '1px solid #fecaca',
-          }}
-        >
+        <div className="dash-alert" role="alert">
           {fetchError}
         </div>
       )}
 
-      <div className="uc-grid-filters">
-        <div className="uc-field">
-          <span className="uc-field-icon"><FiSearch /></span>
+      <div className="dash-filters">
+        <div className="dash-field">
+          <FiSearch />
           <input
             type="text"
             placeholder="Search employees..."
-            className="uc-input uc-input-icon"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        <div className="uc-field">
-          <span className="uc-field-icon"><FiCalendar /></span>
+        <div className="dash-field">
+          <FiCalendar />
           <input
             type="date"
-            className="uc-input uc-input-icon"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
           />
@@ -240,26 +231,28 @@ const Dashboard = () => {
         <select
           value={filterBranch}
           onChange={(e) => setFilterBranch(e.target.value)}
-          className="uc-select"
+          className="dash-select"
         >
           <option value="All">All Branches</option>
           {BRANCH_OPTIONS.map((b) => (
-            <option key={b} value={b}>{b}</option>
+            <option key={b} value={b}>
+              {b}
+            </option>
           ))}
         </select>
 
         <button
           type="button"
-          className="uc-btn uc-btn-primary"
+          className="dash-btn-primary"
           onClick={() => setRefreshNonce((n) => n + 1)}
         >
-          <Sync fontSize="small" />
+          <FiRefreshCw size={18} />
           Refresh Data
         </button>
       </div>
 
       <RecentAttendanceTable logs={filteredLogs} selectedDate={dateFilter} />
-      <AbsentUsersList allUsers={usersForBranch} logs={logsForSelectedDate} />
+      <AbsentUsersList allUsers={usersForBranch} logs={logsForSelectedDate} dateFilter={dateFilter} />
     </div>
   );
 };

@@ -13,7 +13,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import PayslipPreview from "../../components/admin-dashboard/payslip/PayslipPreview";
-import { Add, Delete } from "@mui/icons-material";
+import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -143,8 +143,9 @@ const PayslipGenerator = () => {
       const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
       const scheduled = weeklySchedule[dayName];
 
-      if (!scheduled || scheduled.isLeave || date.getDay() === 0) {
-        if (scheduled?.isLeave) leaveDays++;
+      if (!scheduled || scheduled.isLeave || date.getDay() === 0 || date.getDay() === 6) {
+        // Weekend / scheduled off = weekly off, not personal leave
+        if (scheduled?.isLeave && date.getDay() !== 0 && date.getDay() !== 6) leaveDays++;
         return;
       }
 
@@ -489,12 +490,12 @@ const theme = createTheme({
               </Grid>
               <Grid item xs={2}>
                 <IconButton onClick={() => removeRow("income", index)}>
-                  <Delete />
+                  <FiTrash2 />
                 </IconButton>
               </Grid>
             </Grid>
           ))}
-          <Button startIcon={<Add />} onClick={() => addRow("income")} sx={{ mt: 2 }}>
+          <Button startIcon={<FiPlus />} onClick={() => addRow("income")} sx={{ mt: 2 }}>
             Add Income
           </Button>
         </Box>
@@ -523,12 +524,12 @@ const theme = createTheme({
               </Grid>
               <Grid item xs={2}>
                 <IconButton onClick={() => removeRow("deduction", index)}>
-                  <Delete />
+                  <FiTrash2 />
                 </IconButton>
               </Grid>
             </Grid>
           ))}
-          <Button startIcon={<Add />} onClick={() => addRow("deduction")} sx={{ mt: 2 }}>
+          <Button startIcon={<FiPlus />} onClick={() => addRow("deduction")} sx={{ mt: 2 }}>
             Add Deduction
           </Button>
         </Box>

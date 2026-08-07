@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { API_ENDPOINTS } from '../../../utils/api';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Plus, Trash2 } from 'lucide-react';
+import { FiChevronLeft, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { emptyWork, getUserWorks, normalizeStringList } from '../../../utils/userWorks';
 import { BRANCH_OPTIONS, extractBranchFromUser, buildUserUpdatePayload } from '../../../utils/branches';
 import './edit-form.css';
@@ -167,7 +167,7 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
           <div className="uc-edit-header-left">
             {isPage && (
               <button type="button" className="uc-edit-back-btn" onClick={() => navigate(-1)} aria-label="Go back">
-                <ChevronLeft size={20} />
+                <FiChevronLeft size={20} />
               </button>
             )}
             <div className="uc-edit-avatar">{form.name?.charAt(0) || 'U'}</div>
@@ -305,7 +305,7 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
                 <p>One person can have multiple company / department / role entries.</p>
               </div>
               <button type="button" className="uc-btn uc-btn-indigo" onClick={addWork}>
-                <Plus size={16} />
+                <FiPlus size={16} />
                 Add Work
               </button>
             </div>
@@ -316,7 +316,7 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
                   <span>{index === 0 ? 'Primary Work' : `Work ${index + 1}`}</span>
                   {(form.works || []).length > 1 && (
                     <button type="button" className="uc-btn-text-danger" onClick={() => removeWork(index)}>
-                      <Trash2 size={14} />
+                      <FiTrash2 size={14} />
                       Remove
                     </button>
                   )}

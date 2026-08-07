@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { confirmToast } from '../../utils/interactiveToast';
-import { MoreVertical, UserPlus } from 'lucide-react';
+import { FiMoreVertical, FiUserPlus } from 'react-icons/fi';
 import { API_ENDPOINTS } from '../../utils/api';
 // UserCard is used on the dedicated user detail page now
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -17,6 +17,7 @@ import {
   matchesBranchFilter,
   branchBadgeClass,
 } from '../../utils/branches';
+import { isAttendanceLockedUser } from '../../utils/attendanceLock';
 
 // module-level cache — survives component unmount/remount during navigation
 let _cachedUsers = null;
@@ -155,6 +156,45 @@ const AllUsers = () => {
     }
   };
 
+  const handleUnlockAttendance = async (user) => {
+    if (!user?._id) return;
+
+    const confirmed = await confirmToast({
+      title: 'Unlock attendance?',
+      text: `Unlock attendance access for ${user.name}?`,
+      confirmText: 'Unlock',
+      tone: 'success',
+    });
+    if (!confirmed) return;
+
+    try {
+      setUpdating(true);
+      await axios.post(
+        API_ENDPOINTS.unlockAttendance(user._id),
+        {},
+        { headers: getAuthHeaders() }
+      );
+      setUsers((prev) => {
+        const next = prev.map((u) =>
+          u._id === user._id ? { ...u, attendanceLocked: false, isAttendanceLocked: false } : u
+        );
+        _cachedUsers = next;
+        return next;
+      });
+      toast.success(`Attendance unlocked for ${user.name}`);
+      await fetchUsers();
+    } catch (error) {
+      console.error('Failed to unlock attendance:', error);
+      const apiMsg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.response?.data?.msg;
+      toast.error(`Error: ${apiMsg || 'Could not unlock attendance.'}`);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const isPastEmployee = (user) => !user.isActive || !!user.dateOfRelieving;
 
   const matchesPastSearch = (user) => {
@@ -239,7 +279,7 @@ const AllUsers = () => {
           aria-label="Add User"
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          <UserPlus size={16} strokeWidth={2.5} />
+          <FiUserPlus size={16} strokeWidth={2.5} />
           Add User
         </button>
       </div>
@@ -381,6 +421,11 @@ const AllUsers = () => {
                   <span className={`uc-status-badge${user.isActive ? ' is-active' : ' is-inactive'}`}>
                     {user.isActive ? 'Active' : 'Inactive'}
                   </span>
+                  {isAttendanceLockedUser(user) && (
+                    <span className="uc-status-badge is-locked" title="Attendance locked — incomplete profile">
+                      Locked
+                    </span>
+                  )}
                 </td>
                 <td className="uc-users-actions-cell" onClick={(e) => e.stopPropagation()}>
                   <button
@@ -390,7 +435,7 @@ const AllUsers = () => {
                     aria-label={`Actions for ${user.name}`}
                     aria-expanded={openMenuId === user._id}
                   >
-                    <MoreVertical size={18} />
+                    <FiMoreVertical size={18} />
                   </button>
                 </td>
               </tr>
@@ -440,6 +485,20 @@ const AllUsers = () => {
             >
               {menuUser.isActive ? 'Disable' : 'Enable'}
             </button>
+            {isAttendanceLockedUser(menuUser) && (
+              <button
+                type="button"
+                className="uc-dropdown-item"
+                disabled={updating}
+                style={{ color: '#b45309' }}
+                onClick={() => {
+                  closeActionMenu();
+                  handleUnlockAttendance(menuUser);
+                }}
+              >
+                Unlock Attendance
+              </button>
+            )}
           </div>
         </>,
         document.body

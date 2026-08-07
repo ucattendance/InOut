@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "./AttendancePage.css";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   FiCheckCircle,
   FiXCircle,
@@ -21,6 +21,15 @@ import {
 } from "react-icons/fi";
 
 import { API_ENDPOINTS, logoutUser } from "../../utils/api";
+import { alertToast } from "../../utils/interactiveToast";
+import {
+  ATTENDANCE_LOCKED_MESSAGE,
+  PROFILE_INCOMPLETE_ENTRY_MESSAGE,
+  getAttendanceLockError,
+  getProfileIncompletePayload,
+  isAttendanceLockedUser,
+  isProfileIncompleteUser,
+} from "../../utils/attendanceLock";
 import { useTheme } from "../../utils/useTheme";
 import { useShake } from "../../utils/useShake";
 import ProfileHeader from "../../components/attendance/ProfileHeader";
@@ -35,6 +44,7 @@ import { resolveOfficeFromLocation } from "../../utils/officeLocations";
 function AttendancePage() {
   const navigate = useNavigate();
   const { userId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isSelf = !userId;
   const { theme, toggleTheme } = useTheme();
 
@@ -53,17 +63,41 @@ function AttendancePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comment, setComment] = useState('');
   const [holidays, setHolidays] = useState([]);
+  const [attendanceLocked, setAttendanceLocked] = useState(false);
+  const [showProfileIncompleteModal, setShowProfileIncompleteModal] = useState(false);
+  const [attendanceReady, setAttendanceReady] = useState(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const isCapturingRef = useRef(false);
   const typeRef = useRef(null);
   const showCalendarModalRef = useRef(false);
+  const attendanceLockedRef = useRef(false);
+  const autoCameraOpenedRef = useRef(false);
+  /** True if Profile Incomplete was already shown for this capture → submit cycle. */
+  const profileIncompleteWarnedRef = useRef(false);
+
+  const reminderAction = searchParams.get("action");
+  const wantedType =
+    reminderAction === "checkin"
+      ? "check-in"
+      : reminderAction === "checkout"
+        ? "check-out"
+        : null;
 
   useEffect(() => {
-    fetchUser();
-    fetchAttendance();
-    fetchHolidays();
+    let cancelled = false;
+    setAttendanceReady(false);
+    autoCameraOpenedRef.current = false;
+
+    (async () => {
+      await Promise.all([fetchUser(), fetchAttendance(), fetchHolidays()]);
+      if (!cancelled) setAttendanceReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   useEffect(() => {
@@ -77,6 +111,21 @@ function AttendancePage() {
   useEffect(() => {
     showCalendarModalRef.current = showCalendarModal;
   }, [showCalendarModal]);
+
+  useEffect(() => {
+    attendanceLockedRef.current = attendanceLocked;
+  }, [attendanceLocked]);
+
+  // Attach camera stream after CameraView mounts (isCapturing true)
+  useEffect(() => {
+    if (!isCapturing || !streamRef.current) return undefined;
+    const id = requestAnimationFrame(() => {
+      if (videoRef.current && streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isCapturing]);
 
   const fetchHolidays = async () => {
     const token = localStorage.getItem("token");
@@ -93,15 +142,34 @@ function AttendancePage() {
   const fetchUser = async () => {
     const token = localStorage.getItem("token");
     try {
-      const res = await axios.get(
+      const headers = { Authorization: `Bearer ${token}` };
+      const meRes = await axios.get(
         isSelf
           ? API_ENDPOINTS.getCurrentUser
           : API_ENDPOINTS.getUserById(userId),
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers }
       );
-      setUser(res.data);
+      let userData = meRes.data || {};
+
+      if (isSelf) {
+        try {
+          const profileRes = await axios.get(API_ENDPOINTS.getProfile, { headers });
+          if (profileRes?.data && typeof profileRes.data === "object") {
+            userData = { ...profileRes.data, ...userData };
+          }
+        } catch {
+          /* profile endpoint optional */
+        }
+      }
+
+      setUser(userData);
+      if (isSelf) {
+        const locked = isAttendanceLockedUser(userData);
+        setAttendanceLocked(locked);
+        attendanceLockedRef.current = locked;
+      }
     } catch (err) {
-      // Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to load user info' });
+      // Keep silent on profile load failure; attendance page still usable.
     }
   };
 
@@ -152,20 +220,30 @@ function AttendancePage() {
 
   const startCamera = async () => {
     try {
-      setIsCapturing(true);
+      profileIncompleteWarnedRef.current = false;
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user" },
       });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+      // Only show overlay after camera is actually available (avoids full-page blink on fail)
+      setIsCapturing(true);
     } catch (err) {
       toast.error("Camera Access Denied: Please enable your camera and refresh the page.");
       setIsCapturing(false);
     }
   };
 
-  const openAttendanceCamera = () => {
+  const openAttendanceCamera = async () => {
     if (!isSelf) return;
+    if (attendanceLockedRef.current) {
+      await alertToast({
+        title: "Attendance Locked",
+        text: ATTENDANCE_LOCKED_MESSAGE,
+        confirmText: "OK",
+        tone: "danger",
+      });
+      return;
+    }
     if (!typeRef.current) {
       toast.info("Already done for today — check-in & check-out complete.");
       return;
@@ -175,25 +253,28 @@ function AttendancePage() {
     startCamera();
   };
 
+  // Email deep-link: auto-open camera only for ?action=checkin|checkout
+  // when it matches the next expected step. Reuses openAttendanceCamera so
+  // Attendance Lock / existing gates still apply. Never auto-submits.
+  useEffect(() => {
+    if (!isSelf || !attendanceReady || !wantedType || autoCameraOpenedRef.current) {
+      return;
+    }
+    if (type !== wantedType || isCapturing || attendanceLocked) {
+      return;
+    }
+    autoCameraOpenedRef.current = true;
+    openAttendanceCamera();
+  }, [isSelf, attendanceReady, wantedType, type, isCapturing, attendanceLocked]);
+
   const {
     needsPermission: needsShakePermission,
     requestPermission: requestShakePermission,
     permission: shakePermission,
     isDesktop,
   } = useShake({
-    enabled: isSelf && !!type && !isCapturing && !showCalendarModal,
+    enabled: isSelf && !!type && !isCapturing && !showCalendarModal && !attendanceLocked,
     onShake: () => {
-      const desktop = !/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-      toast.info(
-        typeRef.current === "check-out"
-          ? desktop
-            ? "Opening Check Out camera — press S / Space"
-            : "Shake detected — opening Check Out camera"
-          : desktop
-            ? "Opening Check In camera — press S / Space"
-            : "Shake detected — opening Check In camera",
-        { autoClose: 1500 }
-      );
       openAttendanceCamera();
     },
   });
@@ -203,11 +284,11 @@ function AttendancePage() {
     if (ok) {
       toast.success(
         isDesktop
-          ? "Ready — press S or Space to open camera"
+          ? "Ready — press S to open camera"
           : "Shake enabled — shake phone to open camera"
       );
     } else if (shakePermission === "unsupported") {
-      toast.warning("Shake not supported — press S or Space on keyboard");
+      toast.warning("Shake not supported — press S on keyboard");
     } else {
       toast.error("Motion permission denied — use the Check In / Out button");
     }
@@ -219,6 +300,54 @@ function AttendancePage() {
       streamRef.current = null;
     }
     setIsCapturing(false);
+    setShowProfileIncompleteModal(false);
+  };
+
+  const maybeWarnProfileIncompleteAfterCapture = async (capturedObjectUrl) => {
+    // Warning only after Capture on Check-In — never blocks Submit / never on Check-Out.
+    if (typeRef.current !== "check-in") return;
+
+    let userData = user;
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+      const meRes = await axios.get(API_ENDPOINTS.getCurrentUser, { headers });
+      userData = meRes.data || userData;
+      try {
+        const profileRes = await axios.get(API_ENDPOINTS.getProfile, { headers });
+        if (profileRes?.data && typeof profileRes.data === "object") {
+          userData = { ...profileRes.data, ...userData };
+        }
+      } catch {
+        /* optional */
+      }
+      setUser(userData);
+      const locked = isAttendanceLockedUser(userData);
+      setAttendanceLocked(locked);
+      attendanceLockedRef.current = locked;
+    } catch {
+      /* use cached user */
+    }
+
+    if (isAttendanceLockedUser(userData)) {
+      if (capturedObjectUrl) URL.revokeObjectURL(capturedObjectUrl);
+      setImage(null);
+      setCompressedBlob(null);
+      setComment("");
+      stopCamera();
+      await alertToast({
+        title: "Attendance Locked",
+        text: ATTENDANCE_LOCKED_MESSAGE,
+        confirmText: "OK",
+        tone: "danger",
+      });
+      return;
+    }
+
+    if (isProfileIncompleteUser(userData)) {
+      profileIncompleteWarnedRef.current = true;
+      setShowProfileIncompleteModal(true);
+    }
   };
 
   const captureImage = async () => {
@@ -236,10 +365,12 @@ function AttendancePage() {
         const file = new File([blob], "attendance.jpg", { type: "image/jpeg" });
         const compressed = await compressImage(file);
         if (compressed) {
-          setImage(URL.createObjectURL(compressed));
+          const objectUrl = URL.createObjectURL(compressed);
+          setImage(objectUrl);
           setCompressedBlob(compressed);
           setCapturedTime(new Date());
           getLocation();
+          await maybeWarnProfileIncompleteAfterCapture(objectUrl);
         } else {
           toast.error("Compression Failed");
         }
@@ -262,26 +393,59 @@ function AttendancePage() {
     formData.append("comment", comment);
     appendAttendanceImage(formData, compressedBlob);
 
+    const isCheckIn = type === "check-in";
+
     try {
       setIsSubmitting(true);
-      await axios.post(API_ENDPOINTS.postAttendance, formData, {
+      const res = await axios.post(API_ENDPOINTS.postAttendance, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
-      toast.success(`Success: ${type === "check-in" ? "Checked In" : "Checked Out"} successfully`);
+      // Backend is source of truth for incomplete profile (check-in only).
+      const incompleteFromApi =
+        isCheckIn && Boolean(getProfileIncompletePayload(res.data));
+
+      toast.success(
+        `Success: ${isCheckIn ? "Checked In" : "Checked Out"} successfully`
+      );
       setImage(null);
       setCompressedBlob(null);
       setLocation("");
       setDetectedOffice(null);
-  setComment('');
+      setComment("");
+      // stopCamera clears the modal; re-open only if backend says incomplete
+      // and capture-time warning did not already show (avoid duplicate).
       stopCamera();
+      if (incompleteFromApi && !profileIncompleteWarnedRef.current) {
+        setShowProfileIncompleteModal(true);
+      }
+      profileIncompleteWarnedRef.current = false;
+      if (searchParams.has("action")) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("action");
+        setSearchParams(next, { replace: true });
+      }
       fetchAttendance();
     } catch (err) {
+      if (isCheckIn) {
+        const lock = getAttendanceLockError(err);
+        if (lock.locked) {
+          setAttendanceLocked(true);
+          attendanceLockedRef.current = true;
+          await alertToast({
+            title: "Attendance Locked",
+            text: lock.message || ATTENDANCE_LOCKED_MESSAGE,
+            confirmText: "OK",
+            tone: "danger",
+          });
+          return;
+        }
+      }
       toast.error("Failed: Could not submit attendance");
     } finally {
-      setIsSubmitting(false); // stop loading
+      setIsSubmitting(false);
     }
   };
 
@@ -376,32 +540,51 @@ const partialAttendanceDays = Object.values(currentMonthAttendance).filter(
   day => day.checkin && !day.checkout
 ).length;
 
-// Absent days calculation (only count working days if you want)
-const absentDays = Math.max(0, totalDaysInCurrentMonth - presentDays);
-
 // Working days in current month = days in month minus Sundays minus admin holidays
 const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
 let sundaysInCurrentMonth = 0;
+let saturdaysInCurrentMonth = 0;
 for (let d = 1; d <= daysInCurrentMonth; d++) {
-  if (new Date(currentYear, currentMonth, d).getDay() === 0) sundaysInCurrentMonth++;
+  const day = new Date(currentYear, currentMonth, d).getDay();
+  if (day === 0) sundaysInCurrentMonth++;
+  if (day === 6) saturdaysInCurrentMonth++;
 }
 
 const holidayDaysInCurrentMonth = new Set();
+const holidayDateKeys = new Set();
 holidays.forEach((h) => {
   const hDate = new Date(h.date);
+  if (Number.isNaN(hDate.getTime())) return;
+  holidayDateKeys.add(hDate.toDateString());
+  const dow = hDate.getDay();
   if (
     hDate.getFullYear() === currentYear &&
     hDate.getMonth() === currentMonth &&
-    hDate.getDay() !== 0 // don't double count holidays that fall on Sunday
+    dow !== 0 &&
+    dow !== 6 // don't double count holidays on weekend
   ) {
     holidayDaysInCurrentMonth.add(hDate.getDate());
   }
 });
 
+// Absent / Leaves = past working days (before today) with no check-in.
+// Sat + Sun = office weekly off — never counted as Leaves.
+let absentDays = 0;
+for (let d = 1; d < totalDaysInCurrentMonth; d++) {
+  const date = new Date(currentYear, currentMonth, d);
+  const day = date.getDay();
+  if (day === 0 || day === 6) continue; // Sunday / Saturday office leave
+  if (holidayDaysInCurrentMonth.has(d)) continue;
+  const key = date.toDateString();
+  if (!currentMonthAttendance[key]?.checkin) {
+    absentDays++;
+  }
+}
+
 const totalWorkingDays = Math.max(
   0,
-  daysInCurrentMonth - sundaysInCurrentMonth - holidayDaysInCurrentMonth.size
+  daysInCurrentMonth - sundaysInCurrentMonth - saturdaysInCurrentMonth - holidayDaysInCurrentMonth.size
 );
 
 // A day counts towards attendance as soon as the employee checks in
@@ -421,7 +604,7 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
         <div className="att-stat-card">
           <span className="att-stat-icon att-stat-red"><FiXCircle /></span>
           <span className="att-stat-value att-stat-red">{absentDays}</span>
-          <span className="att-stat-label">Leaves</span>
+          <span className="att-stat-label">Absent</span>
         </div>
         <div className="att-stat-card">
           <span className="att-stat-icon att-stat-orange"><FiClock /></span>
@@ -488,10 +671,13 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
 
                   const key = date.toDateString();
                   const record = attendanceMap[key];
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                  const isHolidayDate = holidayDateKeys.has(key);
 
                   let className = "";
                   if (record?.checkin && record?.checkout) className = "present-day";
                   else if (record?.checkin && !record?.checkout) className = "partial-present";
+                  else if (isWeekend || isHolidayDate) className = "leave-day";
                   else if (date < today) className = "absent-day";
 
                   if (record) className += " calendar-tile-hover";
@@ -553,6 +739,12 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                   );
                 } else if (selectedDate > new Date()) {
                   return <div className="text-gray-500">Future date</div>;
+                } else if (selectedDate.getDay() === 0) {
+                  return <div className="text-blue-600">Office Leave (Sunday)</div>;
+                } else if (selectedDate.getDay() === 6) {
+                  return <div className="text-blue-600">Office Leave (Saturday)</div>;
+                } else if (holidayDateKeys.has(selectedDate.toDateString())) {
+                  return <div className="text-blue-600">Holiday</div>;
                 } else {
                   return <div className="text-red-500">No attendance record</div>;
                 }
@@ -566,6 +758,10 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
               <div className="flex items-center gap-2">
                 <span className="w-4 h-4 bg-yellow-200 rounded"></span>
                 <span>Check-in Only</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 bg-sky-200 rounded"></span>
+                <span>Office Leave / Holiday</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-4 h-4 bg-red-200 rounded"></span>
@@ -590,7 +786,13 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
         setSelectedDate={setSelectedDate}
       />
 
-      {isSelf && type && !isCapturing && (
+      {isSelf && attendanceLocked && !isCapturing && (
+        <p className="att-shake-hint" style={{ color: '#b91c1c', fontWeight: 600 }}>
+          Attendance locked — complete your profile or contact the administrator.
+        </p>
+      )}
+
+      {isSelf && type && !isCapturing && !attendanceLocked && (
         <>
           <button
             type="button"
@@ -607,7 +809,7 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
           ) : (
             <p className="att-shake-hint">
               {isDesktop
-                ? "Desktop: press S or Space to open camera"
+                ? "Desktop: press S to open camera"
                 : "Shake phone to open camera"}
             </p>
           )}
@@ -692,6 +894,7 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                       setImage(null);
                       setCompressedBlob(null);
                       setComment("");
+                      setShowProfileIncompleteModal(false);
                       startCamera();
                     }}
                     className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg"
@@ -713,6 +916,27 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {showProfileIncompleteModal && (
+        <div className="att-modal-backdrop att-profile-warn-backdrop" role="dialog" aria-modal="true">
+          <div className="att-modal" style={{ maxWidth: "22rem", textAlign: "center" }}>
+            <h3 style={{ margin: "0 0 0.75rem", fontSize: "1.15rem", fontWeight: 700 }}>
+              Profile Incomplete
+            </h3>
+            <p style={{ margin: "0 0 1.25rem", color: "var(--att-muted)", lineHeight: 1.5 }}>
+              {PROFILE_INCOMPLETE_ENTRY_MESSAGE}
+            </p>
+            <button
+              type="button"
+              className="att-cta"
+              style={{ width: "100%", margin: 0 }}
+              onClick={() => setShowProfileIncompleteModal(false)}
+            >
+              OK
+            </button>
           </div>
         </div>
       )}

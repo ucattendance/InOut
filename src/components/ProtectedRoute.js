@@ -1,13 +1,15 @@
 // src/components/ProtectedRoute.js
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
+  const location = useLocation();
+  const returnTo = `${location.pathname}${location.search}`;
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: returnTo }} />;
   }
 
   try {
@@ -18,7 +20,7 @@ function ProtectedRoute({ children }) {
     return children;
   } catch (err) {
     localStorage.removeItem("token");
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: returnTo }} />;
   }
 }
 

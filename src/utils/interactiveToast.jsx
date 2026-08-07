@@ -8,6 +8,45 @@ const TOAST_OPTS = {
   closeButton: false,
 };
 
+/** OK-only popup (SweetAlert-style). Optional actionText resolves as 'action'. */
+export function alertToast({
+  title,
+  text,
+  confirmText = 'OK',
+  actionText,
+  tone = 'primary',
+}) {
+  return new Promise((resolve) => {
+    toast(
+      ({ closeToast }) => (
+        <div className="ct-box">
+          <p className="ct-title">{title}</p>
+          {text && <p className="ct-text" style={{ whiteSpace: 'pre-wrap' }}>{text}</p>}
+          <div className="ct-actions">
+            {actionText ? (
+              <button
+                type="button"
+                className="ct-btn ct-tone-default"
+                onClick={() => { resolve('action'); closeToast(); }}
+              >
+                {actionText}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={`ct-btn ct-tone-${tone}`}
+              onClick={() => { resolve('ok'); closeToast(); }}
+            >
+              {confirmText}
+            </button>
+          </div>
+        </div>
+      ),
+      TOAST_OPTS
+    );
+  });
+}
+
 export function confirmToast({ title, text, confirmText = 'Yes', cancelText = 'Cancel', tone = 'primary' }) {
   return new Promise((resolve) => {
     toast(

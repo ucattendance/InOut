@@ -1,68 +1,131 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import axios from 'axios';
 import './layout.css';
-import { logoutUser } from '../../../utils/api';
+import { logoutUser, API_ENDPOINTS } from '../../../utils/api';
 import {
-  FiHome, FiUsers, FiCalendar, FiBarChart2, FiSettings, FiLogOut,
-  FiFileText, FiDollarSign, FiCamera, FiChevronRight
+  FiHome,
+  FiUsers,
+  FiCalendar,
+  FiBarChart2,
+  FiSettings,
+  FiLogOut,
+  FiCheckCircle,
+  FiFolder,
+  FiHelpCircle,
+  FiChevronRight,
+  FiClock,
+  FiMapPin,
+  FiRefreshCw,
 } from 'react-icons/fi';
-
-const menuItems = [
-  { label: 'Dashboard', icon: <FiHome />, path: '/dashboard' },
-  { label: 'Monthly Reports', icon: <FiCamera />, path: '/reports' },
-  {
-    label: 'User Management',
-    icon: <FiUsers />,
-    subItems: [
-      { label: 'User profiles', path: '/all-users' },
-      { label: 'Add User', path: '/add-user' },
-      { label: 'Employees Schedules', path: '/employees' },
-      
-      { label: 'Pending Approvals', path: '/pending-users' }
-    ]
-  },
-  {
-    label: 'Leaves & Lates',
-    icon: <FiCalendar />,
-    subItems: [
-      { label: 'Leave Records', path: '/leave-requests' },
-      { label: 'Late comments', path: '/comments' }
-    ]
-  },
-      {
-        label: 'Documents',
-        icon: <FiFileText />,
-        subItems: [
-          { label: 'Experience Letters', path: '/experience-letters' },
-          { label: 'Internship Certificate', path: '/internship-letter' },
-          { label: 'Internship Offer Letter', path: '/internship-offer' },
-          { label: 'Offer Letters', path: '/offer-letters' },
-          { label: 'All Letters', path: '/all-letters' },
-          { label: 'Relieving Letters', path: '/relieving-letters' },
-          { label: 'Upload Documents', path: '/upload-documents' }
-        ]
-      },
-  { label: 'Pay History', icon: <FiDollarSign />, path: '/salaryhistory' },
-  { label: 'Payslip Generator', icon: <FiBarChart2 />, path: '/payslip' },
-  { label: 'Holiday List', icon: <FiCalendar />, path: '/holidays' },
-  { label: 'API Docs', icon: <FiFileText />, path: '/api-docs' },
-  { label: 'Settings', icon: <FiSettings />, path: '/coming-soon/settings' }
-];
 
 export const APP_BUILD = 'v2026.06.09';
 
-const Sidebar = ({ isOpen, setIsOpen }) => {
-  // Open the 'Documents', 'Leaves & Lates', and 'User Management' submenus by default
-  const [expandedItems, setExpandedItems] = React.useState({
-    Documents: true,
+const menuItems = [
+  { label: 'Dashboard', icon: <FiHome />, path: '/dashboard', tone: 'purple' },
+  {
+    label: 'Reports',
+    icon: <FiBarChart2 />,
+    tone: 'purple',
+    subItems: [
+      { label: 'Monthly Reports', path: '/reports' },
+      { label: 'Payslip Generator', path: '/payslip' },
+      { label: 'Pay History', path: '/salaryhistory' },
+    ],
+  },
+  {
+    label: 'Employees',
+    icon: <FiUsers />,
+    tone: 'green',
+    subItems: [
+      { label: 'User Profiles', path: '/all-users' },
+      { label: 'Add User', path: '/add-user' },
+    ],
+  },
+  {
+    label: 'Attendance',
+    icon: <FiCheckCircle />,
+    tone: 'violet',
+    subItems: [
+      { label: 'Attendance Logs', path: '/attendances' },
+      { label: 'Holiday List', path: '/holidays' },
+    ],
+  },
+  {
+    label: 'Leaves & Lates',
+    icon: <FiMapPin />,
+    tone: 'orange',
+    subItems: [
+      { label: 'Leave Records', path: '/leave-requests' },
+      { label: 'Late comments', path: '/comments' },
+    ],
+  },
+  { label: 'Schedule', icon: <FiCalendar />, path: '/employees', tone: 'blue' },
+  {
+    label: 'Approvals',
+    icon: <FiClock />,
+    path: '/pending-users',
+    tone: 'pink',
+    badgeKey: 'pending',
+  },
+  {
+    label: 'Documents',
+    icon: <FiFolder />,
+    tone: 'sky',
+    subItems: [
+      { label: 'All Letters', path: '/all-letters' },
+      { label: 'Offer Letters', path: '/offer-letters' },
+      { label: 'Experience Letters', path: '/experience-letters' },
+      { label: 'Relieving Letters', path: '/relieving-letters' },
+      { label: 'Internship Certificate', path: '/internship-letter' },
+      { label: 'Internship Offer', path: '/internship-offer' },
+      { label: 'Upload Documents', path: '/upload-documents' },
+    ],
+  },
+  {
+    label: 'Export & Import',
+    icon: <FiRefreshCw />,
+    path: '/coming-soon/export',
+    tone: 'blue',
+  },
+  { label: 'Settings', icon: <FiSettings />, path: '/coming-soon/settings', tone: 'gray' },
+  { label: 'Help & Support', icon: <FiHelpCircle />, path: '/api-docs', tone: 'purple' },
+];
+
+const Sidebar = ({ expanded, onExpand, onCollapse }) => {
+  const [expandedItems, setExpandedItems] = useState({
     'Leaves & Lates': true,
-    'User Management': true
   });
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return undefined;
+
+    let cancelled = false;
+    const loadPending = async () => {
+      try {
+        const res = await axios.get(API_ENDPOINTS.pendingUsers, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!cancelled) {
+          setPendingCount(Array.isArray(res.data) ? res.data.length : 0);
+        }
+      } catch {
+        if (!cancelled) setPendingCount(0);
+      }
+    };
+
+    loadPending();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleItem = (label) => {
-    setExpandedItems(prev => ({
+    setExpandedItems((prev) => ({
       ...prev,
-      [label]: !prev[label]
+      [label]: !prev[label],
     }));
   };
 
@@ -72,96 +135,89 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   };
 
   return (
-    <>
-      <aside className={`admin-sidebar ${isOpen ? 'is-open' : ''}`}>
-        <div className="admin-sidebar-brand">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/inout-logo.png" alt="INOUT logo" style={{ height: 60, width: 'auto' }} />
-          </div>
-          <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 500, opacity: 0.75, marginTop: 2 }}>
-            {APP_BUILD}
-          </span>
-        </div>
+    <aside
+      className={`admin-sidebar admin-sidebar-v2${expanded ? ' is-expanded' : ''}`}
+      onMouseEnter={onExpand}
+      onMouseLeave={onCollapse}
+    >
+      <NavLink
+        to="/dashboard"
+        className="admin-sidebar-brand admin-sidebar-brand-v2"
+        title="Go to Dashboard"
+      >
+        <img src="/inout-logo.png" alt="InOut" className="admin-brand-logo" />
+      </NavLink>
 
-        <nav className="admin-sidebar-nav">
-          {menuItems.map((item, index) => {
-            if (item.subItems) {
-              return (
-                <div key={index} className="mb-1">
-                  <button
-                    type="button"
-                    onClick={() => toggleItem(item.label)}
-                    className="admin-nav-btn"
-                    style={{ justifyContent: 'space-between' }}
-                  >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <span>{item.icon}</span>
-                      <span>{item.label}</span>
-                    </span>
-                    <FiChevronRight
-                      style={{
-                        transform: expandedItems[item.label] ? 'rotate(90deg)' : 'none',
-                        transition: 'transform 0.2s',
-                      }}
-                    />
-                  </button>
-
-                  {expandedItems[item.label] && (
-                    <div className="admin-nav-submenu">
-                      {item.subItems.map((subItem, subIndex) => (
-                        <NavLink
-                          key={subIndex}
-                          to={subItem.path}
-                          className={({ isActive }) =>
-                            `admin-nav-sublink${isActive ? ' active' : ''}`
-                          }
-                          onClick={() => setIsOpen(false)}
-                        >
-                          {subItem.label}
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
+      <nav className="admin-sidebar-nav admin-sidebar-nav-v2">
+        {menuItems.map((item) => {
+          if (item.subItems) {
+            const open = Boolean(expandedItems[item.label]);
             return (
-              <NavLink
-                key={index}
-                to={item.path}
-                className={({ isActive }) =>
-                  `admin-nav-link${isActive ? ' active' : ''}`
-                }
-                onClick={() => setIsOpen(false)}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
+              <div key={item.label} className="admin-nav-group">
+                <button
+                  type="button"
+                  onClick={() => toggleItem(item.label)}
+                  className="admin-nav-btn admin-nav-btn-v2"
+                  title={item.label}
+                >
+                  <span className={`admin-nav-icon tone-${item.tone}`}>{item.icon}</span>
+                  <span className="admin-nav-label">{item.label}</span>
+                  <FiChevronRight className={`admin-nav-chevron ${open ? 'is-open' : ''}`} />
+                </button>
+
+                {open && expanded && (
+                  <div className="admin-nav-submenu">
+                    {item.subItems.map((subItem) => (
+                      <NavLink
+                        key={subItem.path}
+                        to={subItem.path}
+                        className={({ isActive }) =>
+                          `admin-nav-sublink${isActive ? ' active' : ''}`
+                        }
+                      >
+                        {subItem.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
-          })}
+          }
 
-          <div className="admin-nav-logout-wrap">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="admin-nav-btn admin-nav-logout"
+          const badge =
+            item.badgeKey === 'pending' && pendingCount > 0 ? pendingCount : null;
+
+          return (
+            <NavLink
+              key={item.label}
+              to={item.path}
+              className={({ isActive }) =>
+                `admin-nav-link admin-nav-link-v2${isActive ? ' active' : ''}`
+              }
+              title={item.label}
             >
-              <FiLogOut />
-              <span>Logout</span>
-            </button>
-          </div>
-        </nav>
-      </aside>
+              <span className={`admin-nav-icon tone-${item.tone}`}>{item.icon}</span>
+              <span className="admin-nav-label">{item.label}</span>
+              {badge != null && <span className="admin-nav-badge">{badge}</span>}
+            </NavLink>
+          );
+        })}
+      </nav>
 
-      {isOpen && (
-        <div
-          className="admin-sidebar-overlay"
-          role="presentation"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-    </>
+      <div className="admin-nav-logout-wrap admin-nav-footer-v2">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="admin-nav-btn admin-nav-logout"
+          title="Logout"
+        >
+          <FiLogOut />
+          <span className="admin-nav-label">Logout</span>
+        </button>
+
+        <span className="admin-build-tag">{APP_BUILD}</span>
+      </div>
+    </aside>
   );
 };
 

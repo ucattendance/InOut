@@ -15,11 +15,11 @@ import {
   CircularProgress
 } from '@mui/material';
 import {
-  Edit as EditIcon,
-  Visibility as PreviewIcon,
-  Print as PrintIcon,
-  Download as DownloadIcon
-} from '@mui/icons-material';
+  FiEdit as EditIcon,
+  FiEye as PreviewIcon,
+  FiPrinter as PrintIcon,
+  FiDownload as DownloadIcon
+} from 'react-icons/fi';
 import { PayslipForm } from '../../components/admin-dashboard/payslip/PayslipForm';
 import { PayslipPreview } from '../../components/admin-dashboard/payslip/PayslipPreview';
 import axios from 'axios';

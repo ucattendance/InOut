@@ -7,19 +7,21 @@ function isLikelyMobile() {
 
 /**
  * Detects a phone shake via DeviceMotionEvent.
- * Desktop fallback: press S (or Space) to trigger the same action.
+ * Desktop fallback: press S to trigger the same action (Space avoided — too easy to misfire).
  * iOS 13+ needs an explicit user gesture to grant motion permission.
  */
 export function useShake({
   enabled = true,
   onShake,
-  threshold = 18,
-  cooldownMs = 2500,
+  threshold = 32,
+  cooldownMs = 4000,
   desktopKey = true,
 } = {}) {
   const [permission, setPermission] = useState('unknown'); // unknown | granted | denied | unsupported
   const lastShakeAt = useRef(0);
-  const lastAccel = useRef({ x: 0, y: 0, z: 0 });
+  const lastAccel = useRef({ x: null, y: null, z: null });
+  const peakCount = useRef(0);
+  const peakWindowStart = useRef(0);
   const onShakeRef = useRef(onShake);
   const canFireRef = useRef(false);
   const isDesktop = !isLikelyMobile();
@@ -37,6 +39,7 @@ export function useShake({
     const now = Date.now();
     if (now - lastShakeAt.current < cooldownMs) return false;
     lastShakeAt.current = now;
+    peakCount.current = 0;
     if (typeof onShakeRef.current === 'function') {
       onShakeRef.current();
       return true;
@@ -47,7 +50,6 @@ export function useShake({
   const requestPermission = useCallback(async () => {
     if (typeof window === 'undefined') return false;
 
-    // Desktop: no motion sensor needed — keyboard shortcut is enough
     if (isDesktop) {
       setPermission('granted');
       return true;
@@ -77,7 +79,7 @@ export function useShake({
     }
   }, [isDesktop]);
 
-  // Motion sensor (phones)
+  // Motion sensor (phones) — need multiple strong peaks, not tiny noise
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
@@ -106,12 +108,30 @@ export function useShake({
 
       const { x = 0, y = 0, z = 0 } = acc;
       const prev = lastAccel.current;
+
+      // Skip first sample (no baseline yet) — avoids false fire on listen start
+      if (prev.x == null) {
+        lastAccel.current = { x, y, z };
+        return;
+      }
+
       const delta =
         Math.abs(x - prev.x) + Math.abs(y - prev.y) + Math.abs(z - prev.z);
       lastAccel.current = { x, y, z };
 
       if (delta < threshold) return;
-      fireShake();
+
+      const now = Date.now();
+      if (now - peakWindowStart.current > 800) {
+        peakWindowStart.current = now;
+        peakCount.current = 0;
+      }
+      peakCount.current += 1;
+
+      // Real shake usually has several spikes; one bump should not open camera
+      if (peakCount.current >= 3) {
+        fireShake();
+      }
     };
 
     window.addEventListener('devicemotion', handleMotion);
@@ -120,7 +140,7 @@ export function useShake({
     };
   }, [threshold, fireShake, isDesktop]);
 
-  // Desktop fallback: S or Space opens camera
+  // Desktop: S only (Space removed — accidental presses caused camera overlay blink)
   useEffect(() => {
     if (typeof window === 'undefined' || !desktopKey) return undefined;
 
@@ -131,8 +151,7 @@ export function useShake({
         return;
       }
 
-      const key = event.key;
-      if (key === 's' || key === 'S' || key === ' ') {
+      if (event.key === 's' || event.key === 'S') {
         event.preventDefault();
         fireShake();
       }

@@ -20,14 +20,11 @@ import {
   alpha
 } from '@mui/material';
 import {
-  Person,
-  Schedule,
-  AttachMoney,
-  Save,
-  Search,
-  AccessTime,
-  BeachAccess
-} from '@mui/icons-material';
+  FiClock,
+  FiDollarSign,
+  FiSave,
+  FiSearch,
+} from 'react-icons/fi';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../utils/api';
 import Loader from '../../components/admin-dashboard/common/Loader';
@@ -151,7 +148,7 @@ const EmployeeSchedule = () => {
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <Search />
+              <FiSearch />
             </InputAdornment>
           ),
         }}
@@ -193,7 +190,7 @@ const EmployeeSchedule = () => {
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
-                            <AttachMoney />
+                            <FiDollarSign />
                           </InputAdornment>
                         ),
                       }}
@@ -214,7 +211,7 @@ const EmployeeSchedule = () => {
                   <Divider sx={{ my: 3 }}>
 <Box>
                       <Typography variant="h5" fontWeight="bold" sx={{ fontFamily: 'Montserrat', color: '#616161' }}>
-                        <Schedule/> Schedule of {emp.user?.name || 'Unnamed Employee'}
+                        <FiClock /> Schedule of {emp.user?.name || 'Unnamed Employee'}
                       </Typography>
                       <Typography variant="subtitle1" sx={{ opacity: 0.9, color: '#616161' }}>
                         Employee ID: {emp._id?.slice(-6) || 'N/A'} | Role: {emp.user?.position} | {emp.user?.company}
@@ -313,7 +310,7 @@ const EmployeeSchedule = () => {
                   <Button
                     variant="contained"
                     size="large"
-                    startIcon={<Save />}
+                    startIcon={<FiSave />}
                     onClick={() => saveChanges(emp)}
                     sx={{
                       borderRadius: 2,

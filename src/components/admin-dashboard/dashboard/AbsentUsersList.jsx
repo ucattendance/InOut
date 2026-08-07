@@ -1,7 +1,24 @@
 import React from 'react';
 import { activeEmployees, normalizeId, presentEmployeeIds } from '../../../utils/dashboardLogs';
 
-const AbsentUsersList = ({ allUsers = [], logs = [] }) => {
+const isWeekendDate = (date) => {
+  if (!date) {
+    const d = new Date().getDay();
+    return d === 0 || d === 6;
+  }
+  const m = String(date).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const d = m
+    ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    : new Date(date);
+  if (Number.isNaN(d.getTime())) return false;
+  const day = d.getDay();
+  return day === 0 || day === 6;
+};
+
+const AbsentUsersList = ({ allUsers = [], logs = [], dateFilter }) => {
+  // Weekend = office leave — nobody is marked absent
+  if (isWeekendDate(dateFilter)) return null;
+
   const presentIds = presentEmployeeIds(logs);
   const presentNames = new Set(
     logs

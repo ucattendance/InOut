@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import { API_ENDPOINTS } from '../../utils/api';
+import { confirmToast } from '../../utils/interactiveToast';
+import { isAttendanceLockedUser } from '../../utils/attendanceLock';
 import UserCard from '../../components/admin-dashboard/allusers/UserCard';
 import Loader from '../../components/admin-dashboard/common/Loader';
 
@@ -10,24 +13,55 @@ const UserDetail = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [unlocking, setUnlocking] = useState(false);
+
+  const fetchUser = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(API_ENDPOINTS.getUserById(userId), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUser(res.data || null);
+    } catch (err) {
+      console.error('Failed to fetch user', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(API_ENDPOINTS.getUserById(userId), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(res.data || null);
-      } catch (err) {
-        console.error('Failed to fetch user', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUser();
-  }, [userId]);
+  }, [fetchUser]);
+
+  const handleUnlockAttendance = async () => {
+    if (!user?._id) return;
+    const confirmed = await confirmToast({
+      title: 'Unlock attendance?',
+      text: `Unlock attendance access for ${user.name}?`,
+      confirmText: 'Unlock',
+      tone: 'success',
+    });
+    if (!confirmed) return;
+
+    try {
+      setUnlocking(true);
+      const token = localStorage.getItem('token');
+      await axios.post(
+        API_ENDPOINTS.unlockAttendance(user._id),
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setUser((prev) =>
+        prev ? { ...prev, attendanceLocked: false, isAttendanceLocked: false } : prev
+      );
+      toast.success(`Attendance unlocked for ${user.name}`);
+      await fetchUser();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to unlock attendance');
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   if (loading) return <Loader />;
 
@@ -39,12 +73,45 @@ const UserDetail = () => {
         </button>
 
         {user ? (
-          <UserCard
-            user={user}
-            forceExpanded
-            showCloseButton={false}
-            onEdit={(id) => navigate(`/all-users/${id}/edit`)}
-          />
+          <>
+            {isAttendanceLockedUser(user) && (
+              <div
+                style={{
+                  marginBottom: '1rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '0.65rem',
+                  border: '1px solid #fdba74',
+                  background: '#fff7ed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.75rem',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div>
+                  <strong style={{ color: '#9a3412' }}>Attendance Locked</strong>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#9a3412' }}>
+                    This user cannot check in until attendance is unlocked.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="uc-btn uc-btn-primary"
+                  disabled={unlocking}
+                  onClick={handleUnlockAttendance}
+                >
+                  {unlocking ? 'Unlocking…' : 'Unlock Attendance'}
+                </button>
+              </div>
+            )}
+            <UserCard
+              user={user}
+              forceExpanded
+              showCloseButton={false}
+              onEdit={(id) => navigate(`/all-users/${id}/edit`)}
+            />
+          </>
         ) : (
           <div className="uc-profile-card">
             <p className="uc-empty-msg">User not found</p>

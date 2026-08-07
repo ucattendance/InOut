@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
-import { 
-  MapPin, 
-  Calendar, 
-  Building, 
-  Shield, 
-  Eye, 
-  EyeOff, 
-  Edit3, 
-  Mail, 
-  Phone, 
-  GraduationCap,
-  CreditCard,
-  User,
-  ChevronDown,
-  ChevronUp,
-  X,
-  Droplet
-} from 'lucide-react';
+import {
+  FiMapPin,
+  FiCalendar as CalendarIcon,
+  FiHome,
+  FiEye,
+  FiEyeOff,
+  FiEdit3,
+  FiMail,
+  FiPhone,
+  FiAward,
+  FiCreditCard,
+  FiUser,
+  FiChevronDown,
+  FiX,
+  FiDroplet,
+} from 'react-icons/fi';
 import urbancodeLogoSrc from '../../../assets/uclogo.png';
 import jobzenterLogoSrc from '../../../assets/jzlogo.png';
 import { getUserWorks, normalizeStringList } from '../../../utils/userWorks';
@@ -93,12 +91,12 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
             <h3 className="text-lg font-semibold text-gray-600 truncate">{user.name}</h3>
             <p className="text-sm font-semibold text-gray-600 truncate">{user.position}</p>
             <div className="flex items-center gap-1 mt-1">
-              <Building className="w-3 h-3 text-gray-500" />
+              <FiHome className="w-3 h-3 text-gray-500" />
               <span className="text-xs text-gray-500 truncate">{user.company}</span>
             </div>
           </div>
 
-          <ChevronDown className="w-5 h-5 text-gray-400 bg-gray-200 rounded-full" />
+          <FiChevronDown className="w-5 h-5 text-gray-400 bg-gray-200 rounded-full" />
         </div>
       </div>
     );
@@ -123,7 +121,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
           }}
           aria-label="Close"
         >
-          <X size={22} color="#6b7280" />
+          <FiX size={22} color="#6b7280" />
         </button>
       )}
 
@@ -186,7 +184,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
 
           {onEdit && (
             <button type="button" className="uc-btn uc-btn-primary" style={{ marginTop: '1.5rem' }} onClick={handleEditClick}>
-              <Edit3 size={16} />
+              <FiEdit3 size={16} />
               Edit Profile
             </button>
           )}
@@ -196,7 +194,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
           <div className="uc-profile-grid-2">
             <div className="uc-profile-section">
               <h4>
-                <Building size={18} color="#159C8E" />
+                <FiHome size={18} color="#159C8E" />
                 Work Information
                 {works.length > 1 && (
                   <span style={{ fontSize: '0.7rem', fontWeight: 500, color: '#4f46e5', marginLeft: 6 }}>
@@ -207,7 +205,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
               <div>
                 {works.map((work, i) => (
                   <div key={i} className="uc-profile-row" style={i > 0 ? { borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem' } : undefined}>
-                    <Building size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <FiHome size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
                     <div>
                       {works.length > 1 && (
                         <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', marginBottom: 4 }}>
@@ -223,7 +221,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
                   </div>
                 ))}
                 <div className="uc-profile-row">
-                  <Calendar size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <CalendarIcon size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
                   <div>
                     <div>Joined {formatDate(user.dateOfJoining)}</div>
                     <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
@@ -233,7 +231,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
                 </div>
                 {user.qualification && (
                   <div className="uc-profile-row">
-                    <GraduationCap size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <FiAward size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
                     <span>{user.qualification}</span>
                   </div>
                 )}
@@ -242,27 +240,27 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
 
             <div className="uc-profile-section">
               <h4>
-                <User size={18} color="#159C8E" />
+                <FiUser size={18} color="#159C8E" />
                 Personal Details
               </h4>
               <div className="uc-profile-row">
-                <Mail size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                <FiMail size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
                 <span style={{ wordBreak: 'break-all' }}>{user.email || '—'}</span>
               </div>
               <div className="uc-profile-row">
-                <Phone size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                <FiPhone size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>{user.phone || '—'}</span>
               </div>
               <div className="uc-profile-row">
-                <Droplet size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                <FiDroplet size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>{user.bloodGroup || 'N/A'}</span>
               </div>
               <div className="uc-profile-row">
-                <MapPin size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                <FiMapPin size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>{user.address || 'N/A'}</span>
               </div>
               <div className="uc-profile-row">
-                <Calendar size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
+                <CalendarIcon size={18} color="#6b7280" style={{ flexShrink: 0, marginTop: 2 }} />
                 <span>DOB: {user.dateOfBirth ? formatDate(user.dateOfBirth) : 'N/A'}</span>
               </div>
             </div>
@@ -283,7 +281,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
             <div className="uc-profile-section" style={{ background: '#fef2f2', borderColor: '#fecaca' }}>
               <div className="uc-flex-between" style={{ marginBottom: '1rem' }}>
                 <h4 style={{ margin: 0 }}>
-                  <CreditCard size={18} color="#dc2626" />
+                  <FiCreditCard size={18} color="#dc2626" />
                   Banking Details
                 </h4>
                 <button
@@ -292,7 +290,7 @@ const UserCard = ({ user, className = '', onEdit, forceExpanded = false, onClose
                   style={{ padding: '4px 8px' }}
                   onClick={() => setShowBankingDetails(!showBankingDetails)}
                 >
-                  {showBankingDetails ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showBankingDetails ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                 </button>
               </div>
               <div className="uc-profile-grid-2">

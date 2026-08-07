@@ -1,4 +1,5 @@
 import { getPrimaryWork, getUserWorks, withSyncedWorks } from './userWorks';
+import { getLogOfficeName } from './officeLocations';
 
 export const BRANCH_OPTIONS = ['Chennai Pallikarani', 'Chennai Velachery', 'Tirunelveli'];
 
@@ -154,20 +155,28 @@ export const findUserForAttendanceLog = (log, allUsers = []) => {
   return allUsers.find((u) => (u.name || '').trim().toLowerCase() === name) || null;
 };
 
-export const logMatchesBranchFilter = (log, allUsers, filterBranch) => {
+/**
+ * Dashboard branch filter: match the office shown on the attendance log
+ * (Office In / GPS), not the employee's profile branch.
+ * Example: user assigned to Pallikarani but checked in at Velachery must
+ * appear only under "Chennai Velachery", not Pallikarani.
+ */
+export const logMatchesBranchFilter = (log, _allUsers, filterBranch) => {
   if (!filterBranch || filterBranch === 'All') return true;
-  const user = findUserForAttendanceLog(log, allUsers);
-  return matchesBranchFilter(user, filterBranch);
+
+  const officeBranch = normalizeBranchValue(getLogOfficeName(log));
+  if (officeBranch) return officeBranch === filterBranch;
+
+  // Outside Office / unknown location — not part of a selected branch
+  return false;
 };
 
 export const officePresentBadgeClass = (officeName) => {
-  if (!officeName) return 'text-red-600';
+  if (!officeName) return 'uc-office-badge uc-office-outside';
   const o = String(officeName).toLowerCase();
-  if (o.includes('pallikarani')) return 'px-2 py-1 rounded-full text-white bg-green-500 text-xs';
-  if (o.includes('velechery')) return 'px-2 py-1 rounded-full text-white bg-blue-500 text-xs';
-  if (o.includes('tirunelveli') || o.includes('tvl')) {
-    return 'px-2 py-1 rounded-full text-white bg-amber-600 text-xs';
-  }
-  if (isPhysicalOfficePresent(officeName)) return 'px-2 py-1 rounded-full text-white bg-green-500 text-xs';
-  return 'text-red-600';
+  if (o.includes('pallikar')) return 'uc-office-badge uc-office-pallikarani';
+  if (o.includes('velach') || o.includes('velech')) return 'uc-office-badge uc-office-velachery';
+  if (o.includes('tirunel') || o.includes('tvl')) return 'uc-office-badge uc-office-tirunelveli';
+  if (isPhysicalOfficePresent(officeName)) return 'uc-office-badge uc-office-pallikarani';
+  return 'uc-office-badge uc-office-outside';
 };

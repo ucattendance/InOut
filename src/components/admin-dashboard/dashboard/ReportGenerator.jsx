@@ -171,10 +171,11 @@ doc.text(`Total Absent: ${allUsers.length - presentUserIds.length}`, 14, doc.las
 
   return (
     <button
+      type="button"
       onClick={generatePDFReport}
-      className="flex items-center bg-blue-500 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition w-full md:w-auto justify-center"
+      className="dash-btn-primary"
     >
-      <FiDownload className="mr-2" />
+      <FiDownload />
       Download PDF Report
     </button>
   );

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import { FiPlus, FiTrash2 } from 'react-icons/fi';
 
 export const PayslipForm = ({ data, onChange }) => {
   const updateCompany = (field, value) => {
@@ -219,7 +219,7 @@ export const PayslipForm = ({ data, onChange }) => {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Income</CardTitle>
           <Button onClick={addIncomeItem} size="sm" variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
+            <FiPlus className="w-4 h-4 mr-2" />
             Add Item
           </Button>
         </CardHeader>
@@ -248,7 +248,7 @@ export const PayslipForm = ({ data, onChange }) => {
                 size="sm"
                 variant="destructive"
               >
-                <Trash2 className="w-4 h-4" />
+                <FiTrash2 className="w-4 h-4" />
               </Button>
             </div>
           ))}
@@ -260,7 +260,7 @@ export const PayslipForm = ({ data, onChange }) => {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Deductions</CardTitle>
           <Button onClick={addDeductionItem} size="sm" variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
+            <FiPlus className="w-4 h-4 mr-2" />
             Add Item
           </Button>
         </CardHeader>
@@ -291,7 +291,7 @@ export const PayslipForm = ({ data, onChange }) => {
                 size="sm"
                 variant="destructive"
               >
-                <Trash2 className="w-4 h-4" />
+                <FiTrash2 className="w-4 h-4" />
               </Button>
             </div>
           ))}

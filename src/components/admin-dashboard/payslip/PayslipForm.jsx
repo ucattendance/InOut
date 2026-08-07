@@ -13,7 +13,7 @@ import {
   useTheme,
   InputAdornment
 } from '@mui/material';
-import { Add, Delete, Business, Person, CalendarMonth, AttachMoney, MoneyOff, EventBusy } from '@mui/icons-material';
+import { FiPlus, FiTrash2, FiBriefcase, FiUser, FiCalendar, FiDollarSign, FiMinusCircle, FiXCircle } from 'react-icons/fi';
 
 export const PayslipForm = ({ data, onChange, onPreview }) => {
   const theme = useTheme();
@@ -109,7 +109,7 @@ export const PayslipForm = ({ data, onChange, onPreview }) => {
         <CardHeader 
           title={
             <Box display="flex" alignItems="center" gap={1}>
-              <Business color="primary" />
+              <FiBriefcase color="#1976d2" size={22} />
               <Typography variant="h6" color="primary">Company Information</Typography>
             </Box>
           } 
@@ -159,7 +159,7 @@ export const PayslipForm = ({ data, onChange, onPreview }) => {
         <CardHeader 
           title={
             <Box display="flex" alignItems="center" gap={1}>
-              <Person color="primary" />
+              <FiUser color="#1976d2" size={22} />
               <Typography variant="h6" color="primary">Employee Information</Typography>
             </Box>
           }
@@ -212,7 +212,7 @@ export const PayslipForm = ({ data, onChange, onPreview }) => {
         <CardHeader 
           title={
             <Box display="flex" alignItems="center" gap={1}>
-              <EventBusy color="primary" />
+              <FiXCircle color="#1976d2" size={22} />
               <Typography variant="h6" color="primary">Leaves Information</Typography>
             </Box>
           }
@@ -264,7 +264,7 @@ export const PayslipForm = ({ data, onChange, onPreview }) => {
         <CardHeader 
           title={
             <Box display="flex" alignItems="center" gap={1}>
-              <CalendarMonth color="primary" />
+              <FiCalendar color="#1976d2" size={22} />
               <Typography variant="h6" color="primary">Pay Period</Typography>
             </Box>
           }
@@ -314,13 +314,13 @@ export const PayslipForm = ({ data, onChange, onPreview }) => {
         <CardHeader
           title={
             <Box display="flex" alignItems="center" gap={1}>
-              <AttachMoney color="primary" />
+              <FiDollarSign color="#1976d2" size={22} />
               <Typography variant="h6" color="primary">Income</Typography>
             </Box>
           }
           action={
             <Button 
-              startIcon={<Add />} 
+              startIcon={<FiPlus />} 
               onClick={addIncomeItem} 
               variant="contained"
               size="small"
@@ -387,7 +387,7 @@ export const PayslipForm = ({ data, onChange, onPreview }) => {
                         borderRadius: 1
                       }}
                     >
-                      <Delete fontSize="small" />
+                      <FiTrash2 size={18} />
                     </IconButton>
                   </Grid>
                 </Grid>
@@ -402,13 +402,13 @@ export const PayslipForm = ({ data, onChange, onPreview }) => {
         <CardHeader
           title={
             <Box display="flex" alignItems="center" gap={1}>
-              <MoneyOff color="primary" />
+              <FiMinusCircle color="#1976d2" size={22} />
               <Typography variant="h6" color="primary">Deductions</Typography>
             </Box>
           }
           action={
             <Button 
-              startIcon={<Add />} 
+              startIcon={<FiPlus />} 
               onClick={addDeductionItem} 
               variant="contained"
               size="small"
@@ -475,7 +475,7 @@ export const PayslipForm = ({ data, onChange, onPreview }) => {
                         borderRadius: 1
                       }}
                     >
-                      <Delete fontSize="small" />
+                      <FiTrash2 size={18} />
                     </IconButton>
                   </Grid>
                 </Grid>

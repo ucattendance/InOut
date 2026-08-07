@@ -25,8 +25,7 @@ import { sanitizeTextForStandardFonts } from '../../utils/pdfTextSanitizer';
 
 const SIGN_OFF_GAP = 14;
 const MIN_PAGE_BOTTOM = 88;
-const COMPANY_EMAIL = 'admin@urbancode.in';
-const COMPANY_PHONE = '+91 98787 98797';
+
 
 const OFFICE_ADDRESSES = {
   'Chennai - Pallikaranai': '9/29, 5th Street, Kamakoti Nagar, Pallikaranai, Chennai - 600100',
@@ -368,7 +367,7 @@ const OfferLetters = () => {
     page.drawText(signatoryName, { x, y, size: fontSize, font: fontBold, color: titleColor });
     y -= lineHeight;
 
-    // 4. Designation, company, and contact details (normal weight)
+    // 4. Designation and company (normal weight)
     page.drawText(signatoryTitle, { x, y, size: fontSize, font: fontRegular, color: bodyColor });
     y -= lineHeight;
 
@@ -376,12 +375,6 @@ const OfferLetters = () => {
       page.drawText(company, { x, y, size: fontSize, font: fontRegular, color: bodyColor });
       y -= lineHeight;
     }
-
-    page.drawText(COMPANY_EMAIL, { x, y, size: fontSize, font: fontRegular, color: bodyColor });
-    y -= lineHeight;
-
-    page.drawText(`Phone: ${COMPANY_PHONE}`, { x, y, size: fontSize, font: fontRegular, color: bodyColor });
-    y -= lineHeight;
   };
 
   const generatePdf = async () => {

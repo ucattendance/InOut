@@ -1,12 +1,32 @@
-import React, { useState } from "react";
-import { officePresentBadgeClass } from "../../../utils/branches";
-import { getLogOfficeName } from "../../../utils/officeLocations";
+import React, { useState } from 'react';
+import { FiMoreVertical } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
+import { officePresentBadgeClass } from '../../../utils/branches';
+import { getLogOfficeName } from '../../../utils/officeLocations';
 import {
   getAttendanceImage,
   isAttendanceImageFailed,
   resolveAttendanceImageUrl,
-} from "../../../utils/attendanceImage";
-import SafeImage from "../../common/SafeImage";
+} from '../../../utils/attendanceImage';
+import SafeImage from '../../common/SafeImage';
+
+const formatTime = (ts) =>
+  new Date(ts).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+const formatHoursStacked = (checkInTs, checkOutTs) => {
+  const diffMs = new Date(checkOutTs) - new Date(checkInTs);
+  if (!Number.isFinite(diffMs) || diffMs < 0) return null;
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return { hours, minutes };
+};
+
+const avatarLetter = (name = '') => (name.trim().charAt(0) || '?').toUpperCase();
 
 const RecentAttendanceTable = ({ logs = [], selectedDate = '' }) => {
   const [modalImage, setModalImage] = useState(null);
@@ -16,20 +36,27 @@ const RecentAttendanceTable = ({ logs = [], selectedDate = '' }) => {
 
     logList.forEach((log) => {
       const dateKey = new Date(log.timestamp).toDateString();
-      const key = `${log.employeeName}-${dateKey}`;
+      const key = `${log.userId || log.employeeName}-${dateKey}`;
 
       if (!grouped[key]) {
         grouped[key] = {
           employeeName: log.employeeName,
+          employeeId: log.employeeId || '',
+          profilePic: log.profilePic || '',
+          userId: log.userId,
           date: dateKey,
           checkIn: null,
           checkOut: null,
         };
       }
 
-      if (log.type === "check-in") {
+      if (log.employeeId) grouped[key].employeeId = log.employeeId;
+      if (log.profilePic) grouped[key].profilePic = log.profilePic;
+      if (log.employeeName) grouped[key].employeeName = log.employeeName;
+
+      if (log.type === 'check-in') {
         grouped[key].checkIn = log;
-      } else if (log.type === "check-out") {
+      } else if (log.type === 'check-out') {
         grouped[key].checkOut = log;
       }
     });
@@ -40,134 +67,144 @@ const RecentAttendanceTable = ({ logs = [], selectedDate = '' }) => {
   const groupedLogs = groupLogsByEmployeeAndDate(logs);
 
   return (
-    <div className="uc-table-panel">
-      <h2>Recent Attendance Logs</h2>
-      <table className="uc-table">
-        <thead>
-          <tr>
-            <th>Employee</th>
-            <th>Check-In</th>
-            <th>Check-Out</th>
-            <th>Hours</th>
-            <th>Office (In)</th>
-            <th>Office (Out)</th>
-            <th>Image (In)</th>
-            <th>Image (Out)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {groupedLogs.length === 0 ? (
+    <div className="dash-table-panel">
+      <div className="dash-table-head">
+        <h2>Recent Attendance Logs</h2>
+        <Link to="/attendances" className="dash-view-all">
+          View All Logs →
+        </Link>
+      </div>
+
+      <div className="dash-table-scroll">
+        <table className="dash-table">
+          <thead>
             <tr>
-              <td colSpan="8" className="uc-table-empty">
-                {selectedDate
-                  ? `No attendance on ${selectedDate}. Pick another date or click Refresh Data.`
-                  : 'No recent attendance'}
-              </td>
+              <th>Employee</th>
+              <th>Check-In</th>
+              <th>Check-Out</th>
+              <th>Hours</th>
+              <th>Office (In)</th>
+              <th>Office (Out)</th>
+              <th>Image (In)</th>
+              <th>Image (Out)</th>
+              <th />
             </tr>
-          ) : (
-            groupedLogs.map((entry, index) => (
-              <tr key={index}>
-                <td style={{ fontWeight: 500 }}>{entry.employeeName || "Unknown"}</td>
-                <td className="uc-text-green">
-                  {entry.checkIn
-                    ? new Date(entry.checkIn.timestamp).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "—"}
-                </td>
-                <td className="uc-text-blue">
-                  {entry.checkOut
-                    ? new Date(entry.checkOut.timestamp).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "—"}
-                </td>
-                <td>
-                  {entry.checkIn && entry.checkOut
-                    ? (() => {
-                        const diffMs =
-                          new Date(entry.checkOut.timestamp) - new Date(entry.checkIn.timestamp);
-                        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-                        const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
-                        return `${hours}h ${minutes}m`;
-                      })()
-                    : "—"}
-                </td>
-                <td>
-                  {(() => {
-                    const name = getLogOfficeName(entry.checkIn);
-                    return (
-                      <span className={officePresentBadgeClass(name)}>
-                        {name}
-                      </span>
-                    );
-                  })()}
-                </td>
-                <td>
-                  {(() => {
-                    const name = getLogOfficeName(entry.checkOut);
-                    return (
-                      <span className={officePresentBadgeClass(name)}>
-                        {name}
-                      </span>
-                    );
-                  })()}
-                </td>
-                <td>
-                  {(() => {
-                    const src = resolveAttendanceImageUrl(getAttendanceImage(entry.checkIn));
-                    if (!src || isAttendanceImageFailed(src)) return '—';
-                    return (
-                      <SafeImage
-                        src={src}
-                        alt="Check-In"
-                        style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                        onClick={() => setModalImage(src)}
-                      />
-                    );
-                  })()}
-                </td>
-                <td>
-                  {(() => {
-                    const src = resolveAttendanceImageUrl(getAttendanceImage(entry.checkOut));
-                    if (!src || isAttendanceImageFailed(src)) return '—';
-                    return (
-                      <SafeImage
-                        src={src}
-                        alt="Check-Out"
-                        style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                        onClick={() => setModalImage(src)}
-                      />
-                    );
-                  })()}
+          </thead>
+          <tbody>
+            {groupedLogs.length === 0 ? (
+              <tr>
+                <td colSpan="9" className="dash-table-empty">
+                  {selectedDate
+                    ? `No attendance on ${selectedDate}. Pick another date or click Refresh Data.`
+                    : 'No recent attendance'}
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              groupedLogs.map((entry) => {
+                const avatarSrc =
+                  typeof entry.profilePic === 'string' && entry.profilePic.trim()
+                    ? entry.profilePic
+                    : '';
+                const rowKey =
+                  entry.checkIn?._id ||
+                  entry.checkOut?._id ||
+                  `${entry.userId || entry.employeeId || entry.employeeName}-${entry.date}`;
+
+                return (
+                  <tr key={rowKey}>
+                    <td>
+                      <div className="dash-emp-cell">
+                        {avatarSrc ? (
+                          <img src={avatarSrc} alt="" className="dash-emp-avatar" />
+                        ) : (
+                          <div className="dash-emp-avatar dash-emp-avatar-fallback">
+                            {avatarLetter(entry.employeeName)}
+                          </div>
+                        )}
+                        <div>
+                          <div className="dash-emp-name">{entry.employeeName || 'Unknown'}</div>
+                          <div className="dash-emp-id">
+                            ID: {entry.employeeId || '—'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="dash-time-in">
+                      {entry.checkIn ? formatTime(entry.checkIn.timestamp) : '—'}
+                    </td>
+                    <td className="dash-time-out">
+                      {entry.checkOut ? formatTime(entry.checkOut.timestamp) : '—'}
+                    </td>
+                    <td className="dash-hours">
+                      {entry.checkIn && entry.checkOut
+                        ? (() => {
+                            const stacked = formatHoursStacked(
+                              entry.checkIn.timestamp,
+                              entry.checkOut.timestamp
+                            );
+                            if (!stacked) return '—';
+                            return `${stacked.hours}h ${stacked.minutes}m`;
+                          })()
+                        : '—'}
+                    </td>
+                    <td>
+                      <span className={officePresentBadgeClass(getLogOfficeName(entry.checkIn))}>
+                        {getLogOfficeName(entry.checkIn)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={officePresentBadgeClass(getLogOfficeName(entry.checkOut))}>
+                        {getLogOfficeName(entry.checkOut)}
+                      </span>
+                    </td>
+                    <td>
+                      {(() => {
+                        const src = resolveAttendanceImageUrl(getAttendanceImage(entry.checkIn));
+                        if (!src || isAttendanceImageFailed(src)) return '—';
+                        return (
+                          <SafeImage
+                            src={src}
+                            alt="Check-In"
+                            className="dash-thumb"
+                            onClick={() => setModalImage(src)}
+                          />
+                        );
+                      })()}
+                    </td>
+                    <td>
+                      {(() => {
+                        const src = resolveAttendanceImageUrl(getAttendanceImage(entry.checkOut));
+                        if (!src || isAttendanceImageFailed(src)) return '—';
+                        return (
+                          <SafeImage
+                            src={src}
+                            alt="Check-Out"
+                            className="dash-thumb"
+                            onClick={() => setModalImage(src)}
+                          />
+                        );
+                      })()}
+                    </td>
+                    <td>
+                      <button type="button" className="dash-row-more" aria-label="More">
+                        <FiMoreVertical />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {modalImage && (
         <div
           role="presentation"
+          className="dash-image-modal"
           onClick={() => setModalImage(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 50,
-            background: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
         >
-          <img
-            src={modalImage}
-            alt="Preview"
-            style={{ maxHeight: '80vh', maxWidth: '90%', objectFit: 'contain', background: '#fff', padding: 8, borderRadius: 8 }}
-          />
+          <img src={modalImage} alt="Preview" />
         </div>
       )}
     </div>
