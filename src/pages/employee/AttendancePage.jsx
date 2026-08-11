@@ -540,15 +540,13 @@ const partialAttendanceDays = Object.values(currentMonthAttendance).filter(
   day => day.checkin && !day.checkout
 ).length;
 
-// Working days in current month = days in month minus Sundays minus admin holidays
+// Working days in current month = days in month minus Sundays minus admin holidays (Saturday is a working day)
 const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
 let sundaysInCurrentMonth = 0;
-let saturdaysInCurrentMonth = 0;
 for (let d = 1; d <= daysInCurrentMonth; d++) {
   const day = new Date(currentYear, currentMonth, d).getDay();
   if (day === 0) sundaysInCurrentMonth++;
-  if (day === 6) saturdaysInCurrentMonth++;
 }
 
 const holidayDaysInCurrentMonth = new Set();
@@ -561,20 +559,19 @@ holidays.forEach((h) => {
   if (
     hDate.getFullYear() === currentYear &&
     hDate.getMonth() === currentMonth &&
-    dow !== 0 &&
-    dow !== 6 // don't double count holidays on weekend
+    dow !== 0 // don't double count holidays on Sunday
   ) {
     holidayDaysInCurrentMonth.add(hDate.getDate());
   }
 });
 
 // Absent / Leaves = past working days (before today) with no check-in.
-// Sat + Sun = office weekly off — never counted as Leaves.
+// Sunday = office weekly off — never counted as Leaves. Saturday is a working day.
 let absentDays = 0;
 for (let d = 1; d < totalDaysInCurrentMonth; d++) {
   const date = new Date(currentYear, currentMonth, d);
   const day = date.getDay();
-  if (day === 0 || day === 6) continue; // Sunday / Saturday office leave
+  if (day === 0) continue; // Sunday office leave
   if (holidayDaysInCurrentMonth.has(d)) continue;
   const key = date.toDateString();
   if (!currentMonthAttendance[key]?.checkin) {
@@ -584,7 +581,7 @@ for (let d = 1; d < totalDaysInCurrentMonth; d++) {
 
 const totalWorkingDays = Math.max(
   0,
-  daysInCurrentMonth - sundaysInCurrentMonth - saturdaysInCurrentMonth - holidayDaysInCurrentMonth.size
+  daysInCurrentMonth - sundaysInCurrentMonth - holidayDaysInCurrentMonth.size
 );
 
 // A day counts towards attendance as soon as the employee checks in
@@ -671,13 +668,13 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
 
                   const key = date.toDateString();
                   const record = attendanceMap[key];
-                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                  const isSunday = date.getDay() === 0;
                   const isHolidayDate = holidayDateKeys.has(key);
 
                   let className = "";
                   if (record?.checkin && record?.checkout) className = "present-day";
                   else if (record?.checkin && !record?.checkout) className = "partial-present";
-                  else if (isWeekend || isHolidayDate) className = "leave-day";
+                  else if (isSunday || isHolidayDate) className = "leave-day";
                   else if (date < today) className = "absent-day";
 
                   if (record) className += " calendar-tile-hover";
@@ -741,8 +738,6 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
                   return <div className="text-gray-500">Future date</div>;
                 } else if (selectedDate.getDay() === 0) {
                   return <div className="text-blue-600">Office Leave (Sunday)</div>;
-                } else if (selectedDate.getDay() === 6) {
-                  return <div className="text-blue-600">Office Leave (Saturday)</div>;
                 } else if (holidayDateKeys.has(selectedDate.toDateString())) {
                   return <div className="text-blue-600">Holiday</div>;
                 } else {

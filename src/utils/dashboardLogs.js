@@ -74,7 +74,7 @@ export const buildSummaryFromLogs = (logs = [], users = [], dateFilter) => {
       : new Date(dateFilter);
   }
   const isOfficeLeave = !Number.isNaN(checkDate.getTime()) &&
-    (checkDate.getDay() === 0 || checkDate.getDay() === 6);
+    checkDate.getDay() === 0;
 
   return {
     totalEmployees,
