@@ -12,15 +12,12 @@
 
 Open: **https://github.com/ucattendance/InOut/settings/secrets/actions**
 
-| Secret name | Value (from Hostinger hPanel) |
+| Secret name | Value (from hPanel → FTP Access for inout.urbancode.tech) |
 |-------------|--------|
-| `FTP_SERVER` | **SSH IP** → `93.127.208.197` (hPanel → Advanced → SSH Access) |
-| `FTP_USERNAME` | **SSH username** → `u736600761` |
-| `FTP_PASSWORD` | **SSH password** (Change → set a strong password) |
-| `FTP_SERVER_DIR` | `domains/inout.urbancode.tech/public_html/` |
-
-> **Note:** GitHub Actions uses **SFTP over SSH port 65002** (not FTP port 21).  
-> Delete old FTP-only credentials if they were for a separate FTP account.
+| `FTP_SERVER` | `93.127.208.197` (no `ftp://` prefix) |
+| `FTP_USERNAME` | `u736600761.inout.urbancode.tech` |
+| `FTP_PASSWORD` | FTP password (Change FTP password in hPanel) |
+| `FTP_SERVER_DIR` | **Delete / leave empty** (FTP root = `public_html`) |
 
 ### Backend (`InOut-backend` repo) — Linode VPS
 

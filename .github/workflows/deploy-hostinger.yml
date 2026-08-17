@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       ftp_server_dir:
-        description: 'Remote folder (leave empty = domains/inout.urbancode.tech/public_html/)'
+        description: 'Remote folder (leave empty = FTP account root / = public_html)'
         required: false
         default: ''
 
@@ -39,11 +39,11 @@ jobs:
       - name: Validate deploy secrets
         run: |
           missing=0
-          if [ -z "${{ secrets.FTP_SERVER }}" ]; then echo "::error::Missing secret FTP_SERVER (Hostinger SSH IP, e.g. 93.127.208.197)"; missing=1; fi
-          if [ -z "${{ secrets.FTP_USERNAME }}" ]; then echo "::error::Missing secret FTP_USERNAME (Hostinger SSH username)"; missing=1; fi
-          if [ -z "${{ secrets.FTP_PASSWORD }}" ]; then echo "::error::Missing secret FTP_PASSWORD (Hostinger SSH password)"; missing=1; fi
+          if [ -z "${{ secrets.FTP_SERVER }}" ]; then echo "::error::Missing FTP_SERVER (Hostinger FTP IP, e.g. 93.127.208.197)"; missing=1; fi
+          if [ -z "${{ secrets.FTP_USERNAME }}" ]; then echo "::error::Missing FTP_USERNAME (e.g. u736600761.inout.urbancode.tech)"; missing=1; fi
+          if [ -z "${{ secrets.FTP_PASSWORD }}" ]; then echo "::error::Missing FTP_PASSWORD"; missing=1; fi
           if [ "$missing" -eq 1 ]; then exit 1; fi
-          echo "Deploy server credentials are set."
+          echo "Deploy credentials are set."
 
       - name: Resolve upload directory
         id: ftpdir
@@ -52,8 +52,9 @@ jobs:
           if [ -z "$dir" ]; then
             dir="${{ secrets.FTP_SERVER_DIR }}"
           fi
-          if [ -z "$dir" ]; then
-            dir="domains/inout.urbancode.tech/public_html/"
+          # Domain FTP account root is already public_html for inout.urbancode.tech.
+          if [ -z "$dir" ] || [ "$dir" = "public_html" ] || [ "$dir" = "public_html/" ] || [ "$dir" = "/public_html" ] || [ "$dir" = "/public_html/" ]; then
+            dir="/"
           fi
           case "$dir" in
             */) ;;
@@ -62,15 +63,15 @@ jobs:
           echo "Using remote server-dir: $dir"
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
 
-      # Hostinger shared hosting: use SFTP over SSH (port 65002), not plain FTP port 21.
-      - name: Deploy to Hostinger (SFTP)
+      - name: Deploy to Hostinger (FTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: sftp
-          port: 65002
+          protocol: ftp
+          port: 21
+          security: loose
           log-level: verbose
           local-dir: ./build/
           server-dir: ${{ steps.ftpdir.outputs.dir }}
@@ -90,5 +91,5 @@ jobs:
             echo "Live site updated successfully."
           else
             echo "::warning::Upload finished but live site still shows an old build."
-            echo "::warning::Check FTP_SERVER_DIR = domains/inout.urbancode.tech/public_html/"
+            echo "::warning::FTP account root should be public_html — leave FTP_SERVER_DIR empty."
           fi
