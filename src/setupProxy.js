@@ -25,7 +25,7 @@ module.exports = function (app) {
         return isApiPath && !isPageNavigation;
       },
       {
-        target: 'https://uc-attendance-system-1ts2.onrender.com',
+        target: 'http://172.105.61.231:5010',
         changeOrigin: true,
         secure: true,
         logLevel: 'silent',

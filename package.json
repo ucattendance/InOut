@@ -2,7 +2,7 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
-  "proxy": "https://uc-attendance-system-1ts2.onrender.com",
+  "proxy": "http://172.105.61.231:5010",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

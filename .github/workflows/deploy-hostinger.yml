@@ -29,6 +29,7 @@ jobs:
         run: npm run build
         env:
           CI: false
+          REACT_APP_API_URL: https://api.inout.urbancode.tech
 
       - name: Validate FTP secrets
         run: |

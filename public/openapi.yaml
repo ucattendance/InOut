@@ -4,7 +4,7 @@ info:
   description: API documentation for the InOut attendance management application.
   version: 1.0.0
 servers:
-  - url: https://uc-attendance-system-1ts2.onrender.com
+  - url: https://api.inout.urbancode.tech
     description: Production (Render)
   - url: http://localhost:3000
     description: Local dev (proxied to production API)
