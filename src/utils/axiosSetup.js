@@ -8,7 +8,9 @@ let refreshPromise = null;
 
 function clearSessionAndRedirect() {
   localStorage.removeItem('token');
-  window.location.href = '/login';
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login';
+  }
 }
 
 axios.interceptors.request.use((config) => {
@@ -24,6 +26,21 @@ axios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { response, config: originalRequest } = error;
+
+    if (response?.status === 401) {
+      const url = originalRequest?.url || '';
+      const isAuthLogin = url.includes('/auth/login') || url.includes('/auth/register');
+      const msg = response.data?.msg || response.data?.error || '';
+      const invalidSession =
+        msg === 'Token is not valid' ||
+        msg === 'No token, authorization denied' ||
+        response.data?.code === 'TOKEN_EXPIRED';
+
+      if (!isAuthLogin && invalidSession) {
+        clearSessionAndRedirect();
+        return Promise.reject(error);
+      }
+    }
 
     if (!response || response.status !== 401 || response.data?.code !== 'TOKEN_EXPIRED') {
       return Promise.reject(error);
