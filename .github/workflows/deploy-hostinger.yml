@@ -44,7 +44,7 @@ jobs:
         run: |
           dir="${{ secrets.FTP_SERVER_DIR }}"
           if [ -z "$dir" ]; then
-            dir="/public_html/"
+            dir="/domains/inout.urbancode.tech/public_html/"
           fi
           case "$dir" in
             */) ;;
@@ -71,8 +71,12 @@ jobs:
             **/node_modules/**
 
       - name: Verify live deploy check page
-        continue-on-error: true
         run: |
-          sleep 20
-          curl -fsS "https://inout.urbancode.tech/deploy-check.html" | grep -q "New build deployed"
+          sleep 25
+          html=$(curl -fsS "https://inout.urbancode.tech/deploy-check.html")
+          echo "$html" | grep -q "v2026.08.17-linode" || {
+            echo "::error::Live site still on old build. Set GitHub secret FTP_SERVER_DIR to /domains/inout.urbancode.tech/public_html/"
+            echo "$html"
+            exit 1
+          }
           echo "Live site updated successfully."
