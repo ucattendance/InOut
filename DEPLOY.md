@@ -14,10 +14,14 @@ Open: **https://github.com/ucattendance/InOut/settings/secrets/actions**
 
 | Secret name | Value |
 |-------------|--------|
-| `FTP_SERVER` | Hostinger FTP hostname (hPanel → FTP Accounts) |
-| `FTP_USERNAME` | FTP username |
+| `FTP_SERVER` | Hostinger **FTP hostname** from hPanel → FTP Accounts (e.g. `ftp.inout.urbancode.tech` or server IP — not the website URL) |
+| `FTP_USERNAME` | FTP username for **inout.urbancode.tech** |
 | `FTP_PASSWORD` | FTP password |
-| `FTP_SERVER_DIR` | `/domains/inout.urbancode.tech/public_html/` (recommended) |
+| `FTP_SERVER_DIR` | Usually **leave empty** (FTP account root = site `public_html`). Only set `/domains/inout.urbancode.tech/public_html/` if you use the **main hosting account** FTP user. |
+
+**Find the correct folder:** hPanel → **FTP Accounts** → check the account **Directory** column.
+- Directory = `public_html` for inout → leave `FTP_SERVER_DIR` **empty** (workflow uses `/`)
+- Main account FTP → set `FTP_SERVER_DIR` = `/domains/inout.urbancode.tech/public_html/`
 
 ### Backend (`InOut-backend` repo) — Linode VPS
 

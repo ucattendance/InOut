@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      ftp_server_dir:
+        description: 'Hostinger FTP folder (leave empty = FTP account root /)'
+        required: false
+        default: ''
 
 concurrency:
   group: deploy-hostinger
@@ -38,15 +43,20 @@ jobs:
           if [ -z "${{ secrets.FTP_USERNAME }}" ]; then echo "::error::Missing secret FTP_USERNAME"; missing=1; fi
           if [ -z "${{ secrets.FTP_PASSWORD }}" ]; then echo "::error::Missing secret FTP_PASSWORD"; missing=1; fi
           if [ "$missing" -eq 1 ]; then exit 1; fi
+          echo "FTP_SERVER is set (hostname hidden)."
 
       - name: Resolve FTP upload directory
         id: ftpdir
         run: |
-          dir="${{ secrets.FTP_SERVER_DIR }}"
-          # Hostinger shared hosting: site files live under the domain folder,
-          # not the account root /public_html/ (uploads there won't update inout.urbancode.tech).
+          # Priority: manual workflow input → GitHub secret → FTP account root.
+          # Hostinger domain FTP accounts usually land directly in that site's public_html,
+          # so server-dir should be "/" (not /domains/.../public_html/).
+          dir="${{ github.event.inputs.ftp_server_dir }}"
+          if [ -z "$dir" ]; then
+            dir="${{ secrets.FTP_SERVER_DIR }}"
+          fi
           if [ -z "$dir" ] || [ "$dir" = "/public_html" ] || [ "$dir" = "/public_html/" ]; then
-            dir="/domains/inout.urbancode.tech/public_html/"
+            dir="/"
           fi
           case "$dir" in
             */) ;;
@@ -67,6 +77,7 @@ jobs:
           log-level: verbose
           local-dir: ./build/
           server-dir: ${{ steps.ftpdir.outputs.dir }}
+          state-name: .ftp-deploy-sync-state.json
           exclude: |
             **/.git*
             **/.git*/**
@@ -81,7 +92,8 @@ jobs:
           if echo "$html" | grep -q "v2026.08.17-linode"; then
             echo "Live site updated successfully."
           else
-            echo "::warning::Deploy uploaded but live site still shows an old build."
-            echo "::warning::Set GitHub secret FTP_SERVER_DIR to /domains/inout.urbancode.tech/public_html/"
-            echo "::warning::Or upload hostinger-build-linode.zip manually via Hostinger File Manager."
+            echo "::warning::FTP upload finished but live site still shows an old build."
+            echo "::warning::In Hostinger hPanel → FTP Accounts, check the account Directory."
+            echo "::warning::If Directory is public_html for inout.urbancode.tech, leave FTP_SERVER_DIR empty or set /"
+            echo "::warning::If using main account FTP, set FTP_SERVER_DIR to /domains/inout.urbancode.tech/public_html/"
           fi
