@@ -17,7 +17,7 @@ Open: **https://github.com/ucattendance/InOut/settings/secrets/actions**
 | `FTP_SERVER` | Hostinger FTP hostname (hPanel → FTP Accounts) |
 | `FTP_USERNAME` | FTP username |
 | `FTP_PASSWORD` | FTP password |
-| `FTP_SERVER_DIR` | `/public_html/` or `/domains/inout.urbancode.tech/public_html/` |
+| `FTP_SERVER_DIR` | `/domains/inout.urbancode.tech/public_html/` (recommended) |
 
 ### Backend (`InOut-backend` repo) — Linode VPS
 
