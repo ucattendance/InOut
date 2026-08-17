@@ -12,16 +12,15 @@
 
 Open: **https://github.com/ucattendance/InOut/settings/secrets/actions**
 
-| Secret name | Value |
+| Secret name | Value (from Hostinger hPanel) |
 |-------------|--------|
-| `FTP_SERVER` | Hostinger **FTP hostname** from hPanel → FTP Accounts (e.g. `ftp.inout.urbancode.tech` or server IP — not the website URL) |
-| `FTP_USERNAME` | FTP username for **inout.urbancode.tech** |
-| `FTP_PASSWORD` | FTP password |
-| `FTP_SERVER_DIR` | Usually **leave empty** (FTP account root = site `public_html`). Only set `/domains/inout.urbancode.tech/public_html/` if you use the **main hosting account** FTP user. |
+| `FTP_SERVER` | **SSH IP** → `93.127.208.197` (hPanel → Advanced → SSH Access) |
+| `FTP_USERNAME` | **SSH username** → `u736600761` |
+| `FTP_PASSWORD` | **SSH password** (Change → set a strong password) |
+| `FTP_SERVER_DIR` | `domains/inout.urbancode.tech/public_html/` |
 
-**Find the correct folder:** hPanel → **FTP Accounts** → check the account **Directory** column.
-- Directory = `public_html` for inout → leave `FTP_SERVER_DIR` **empty** (workflow uses `/`)
-- Main account FTP → set `FTP_SERVER_DIR` = `/domains/inout.urbancode.tech/public_html/`
+> **Note:** GitHub Actions uses **SFTP over SSH port 65002** (not FTP port 21).  
+> Delete old FTP-only credentials if they were for a separate FTP account.
 
 ### Backend (`InOut-backend` repo) — Linode VPS
 
