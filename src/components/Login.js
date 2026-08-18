@@ -29,22 +29,26 @@ function Login() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    if (!token) return;
 
-    if (token) {
+    let cancelled = false;
+
+    (async () => {
       try {
-        const decoded = jwtDecode(token);
-        const isExpired = decoded.exp * 1000 < Date.now();
-
-        if (isExpired) {
-          localStorage.removeItem('token');
-        } else {
-          navigate(getSafeReturnPath(returnFrom, decoded.role), { replace: true });
-        }
+        const response = await axios.get(API_ENDPOINTS.getCurrentUser, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cancelled) return;
+        const role = response.data?.role || jwtDecode(token).role;
+        navigate(getSafeReturnPath(returnFrom, role), { replace: true });
       } catch (err) {
-        console.error('Error decoding token:', err);
         localStorage.removeItem('token');
       }
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [navigate, returnFrom]);
   const handleSubmit = async (e) => {
     e.preventDefault();

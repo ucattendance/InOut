@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      ftp_server_dir:
+        description: 'Remote folder (leave empty = FTP account root / = public_html)'
+        required: false
+        default: ''
 
 concurrency:
   group: deploy-hostinger
@@ -29,30 +34,35 @@ jobs:
         run: npm run build
         env:
           CI: false
+          REACT_APP_API_URL: https://api.inout.urbancode.tech
 
-      - name: Validate FTP secrets
+      - name: Validate deploy secrets
         run: |
           missing=0
-          if [ -z "${{ secrets.FTP_SERVER }}" ]; then echo "::error::Missing secret FTP_SERVER — GitHub → Settings → Secrets → Actions"; missing=1; fi
-          if [ -z "${{ secrets.FTP_USERNAME }}" ]; then echo "::error::Missing secret FTP_USERNAME"; missing=1; fi
-          if [ -z "${{ secrets.FTP_PASSWORD }}" ]; then echo "::error::Missing secret FTP_PASSWORD"; missing=1; fi
+          if [ -z "${{ secrets.FTP_SERVER }}" ]; then echo "::error::Missing FTP_SERVER (Hostinger FTP IP, e.g. 93.127.208.197)"; missing=1; fi
+          if [ -z "${{ secrets.FTP_USERNAME }}" ]; then echo "::error::Missing FTP_USERNAME (e.g. u736600761.inout.urbancode.tech)"; missing=1; fi
+          if [ -z "${{ secrets.FTP_PASSWORD }}" ]; then echo "::error::Missing FTP_PASSWORD"; missing=1; fi
           if [ "$missing" -eq 1 ]; then exit 1; fi
+          echo "Deploy credentials are set."
 
-      - name: Resolve FTP upload directory
+      - name: Resolve upload directory
         id: ftpdir
         run: |
-          dir="${{ secrets.FTP_SERVER_DIR }}"
+          dir="${{ github.event.inputs.ftp_server_dir }}"
           if [ -z "$dir" ]; then
-            dir="/public_html/"
+            dir="${{ secrets.FTP_SERVER_DIR }}"
+          fi
+          # Domain FTP account root is already public_html for inout.urbancode.tech.
+          if [ -z "$dir" ] || [ "$dir" = "public_html" ] || [ "$dir" = "public_html/" ] || [ "$dir" = "/public_html" ] || [ "$dir" = "/public_html/" ]; then
+            dir="/"
           fi
           case "$dir" in
             */) ;;
             *) dir="$dir/" ;;
           esac
+          echo "Using remote server-dir: $dir"
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
 
-      # Hostinger usually works with plain FTP + FTP IP (not domain / not ftps://).
-      # If this still fails, edit FTP_SERVER secret to the FTP IP from hPanel → FTP Accounts.
       - name: Deploy to Hostinger (FTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
@@ -62,8 +72,10 @@ jobs:
           protocol: ftp
           port: 21
           security: loose
+          log-level: verbose
           local-dir: ./build/
           server-dir: ${{ steps.ftpdir.outputs.dir }}
+          state-name: .ftp-deploy-sync-state.json
           exclude: |
             **/.git*
             **/.git*/**
@@ -72,6 +84,12 @@ jobs:
       - name: Verify live deploy check page
         continue-on-error: true
         run: |
-          sleep 20
-          curl -fsS "https://inout.urbancode.tech/deploy-check.html" | grep -q "New build deployed"
-          echo "Live site updated successfully."
+          sleep 30
+          html=$(curl -fsS "https://inout.urbancode.tech/deploy-check.html" || true)
+          echo "$html"
+          if echo "$html" | grep -q "v2026.08.17-linode"; then
+            echo "Live site updated successfully."
+          else
+            echo "::warning::Upload finished but live site still shows an old build."
+            echo "::warning::FTP account root should be public_html — leave FTP_SERVER_DIR empty."
+          fi

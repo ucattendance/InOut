@@ -12,27 +12,25 @@
 
 Open: **https://github.com/ucattendance/InOut/settings/secrets/actions**
 
-| Secret name | Value |
+| Secret name | Value (from hPanel → FTP Access for inout.urbancode.tech) |
 |-------------|--------|
-| `FTP_SERVER` | Hostinger FTP hostname (hPanel → FTP Accounts) |
-| `FTP_USERNAME` | FTP username |
-| `FTP_PASSWORD` | FTP password |
-| `FTP_SERVER_DIR` | `/public_html/` or `/domains/inout.urbancode.tech/public_html/` |
+| `FTP_SERVER` | `93.127.208.197` (no `ftp://` prefix) |
+| `FTP_USERNAME` | `u736600761.inout.urbancode.tech` |
+| `FTP_PASSWORD` | FTP password (Change FTP password in hPanel) |
+| `FTP_SERVER_DIR` | **Delete / leave empty** (FTP root = `public_html`) |
 
-### Backend (`InOut-backend` repo)
+### Backend (`InOut-backend` repo) — Linode VPS
 
-**Option A — Render Deploy Hook (GitHub Actions)**
+Backend runs on **Linode** (`172.105.61.231`, port `5010`, PM2 `inout-backend`).
 
-Open: **https://github.com/ucattendance/InOut-backend/settings/secrets/actions**
+Public API URL (HTTPS): **https://api.inout.urbancode.tech**
 
-| Secret name | Value |
-|-------------|--------|
-| `RENDER_DEPLOY_HOOK` | Render → service → Settings → Deploy Hook URL |
+One-time server setup: see `InOut-backend/deploy/LINODE_API_SETUP.md`
 
-**Option B — Render GitHub connect (recommended)**
-
-Render Dashboard → `uc-attendance-system-1ts2` → Settings → connect repo `ucattendance/InOut-backend` branch `main`.  
-Then every `git push` auto-deploys without the hook secret.
+| Check | URL |
+|-------|-----|
+| Backend ping | https://api.inout.urbancode.tech/ping |
+| Backend Swagger | https://api.inout.urbancode.tech/api-docs |
 
 ---
 
@@ -45,11 +43,10 @@ git add .
 git commit -m "your message"
 git push origin main
 
-# Backend → Render
-cd c:\Users\nagus\OneDrive\Desktop\InOut-backend
-git add .
-git commit -m "your message"
-git push origin main
+# Backend → Linode (git pull on server)
+cd ~/Inout-backend
+git pull origin main
+pm2 restart inout-backend
 ```
 
 ---
@@ -68,8 +65,8 @@ git push origin main
 | Frontend deploy | https://inout.urbancode.tech/deploy-check.html |
 | Build version | Sidebar **v2026.06.09** |
 | API docs | https://inout.urbancode.tech/api-docs |
-| Backend ping | https://uc-attendance-system-1ts2.onrender.com/ping |
-| Backend Swagger | https://uc-attendance-system-1ts2.onrender.com/api-docs |
+| Backend ping | https://api.inout.urbancode.tech/ping |
+| Backend Swagger | https://api.inout.urbancode.tech/api-docs |
 
 Dashboard-la **Refresh Data** click pannunga (cache clear).
 

@@ -11,7 +11,7 @@ function ProfileHeader({ theme, toggleTheme }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch(API_ENDPOINTS.getUsers, {
+        const res = await fetch(API_ENDPOINTS.getCurrentUser, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -19,11 +19,7 @@ function ProfileHeader({ theme, toggleTheme }) {
 
         if (!res.ok) throw new Error('Failed to fetch user');
 
-        const users = await res.json();
-        const decoded = JSON.parse(atob(token.split('.')[1]));
-        const userId = decoded.userId;
-
-        const currentUser = users.find((u) => u._id === userId);
+        const currentUser = await res.json();
         setUser(currentUser);
       } catch (err) {
         console.error('Error loading user:', err.message);
