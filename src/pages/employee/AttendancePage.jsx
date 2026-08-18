@@ -25,10 +25,14 @@ import { alertToast } from "../../utils/interactiveToast";
 import {
   ATTENDANCE_LOCKED_MESSAGE,
   PROFILE_INCOMPLETE_ENTRY_MESSAGE,
+  formatMissingProfileFields,
   getAttendanceLockError,
+  getMissingProfileFieldsFromUser,
   getProfileIncompletePayload,
   isAttendanceLockedUser,
   isProfileIncompleteUser,
+  mergeUserRecords,
+  unwrapUserPayload,
 } from "../../utils/attendanceLock";
 import { useTheme } from "../../utils/useTheme";
 import { useShake } from "../../utils/useShake";
@@ -65,6 +69,7 @@ function AttendancePage() {
   const [holidays, setHolidays] = useState([]);
   const [attendanceLocked, setAttendanceLocked] = useState(false);
   const [showProfileIncompleteModal, setShowProfileIncompleteModal] = useState(false);
+  const [missingProfileFields, setMissingProfileFields] = useState([]);
   const [attendanceReady, setAttendanceReady] = useState(false);
 
   const videoRef = useRef(null);
@@ -149,13 +154,13 @@ function AttendancePage() {
           : API_ENDPOINTS.getUserById(userId),
         { headers }
       );
-      let userData = meRes.data || {};
+      let userData = unwrapUserPayload(meRes.data);
 
       if (isSelf) {
         try {
           const profileRes = await axios.get(API_ENDPOINTS.getProfile, { headers });
           if (profileRes?.data && typeof profileRes.data === "object") {
-            userData = { ...profileRes.data, ...userData };
+            userData = mergeUserRecords(userData, unwrapUserPayload(profileRes.data));
           }
         } catch {
           /* profile endpoint optional */
@@ -167,6 +172,7 @@ function AttendancePage() {
         const locked = isAttendanceLockedUser(userData);
         setAttendanceLocked(locked);
         attendanceLockedRef.current = locked;
+        setMissingProfileFields(getMissingProfileFieldsFromUser(userData));
       }
     } catch (err) {
       // Keep silent on profile load failure; attendance page still usable.
@@ -312,11 +318,11 @@ function AttendancePage() {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
       const meRes = await axios.get(API_ENDPOINTS.getCurrentUser, { headers });
-      userData = meRes.data || userData;
+      userData = unwrapUserPayload(meRes.data) || userData;
       try {
         const profileRes = await axios.get(API_ENDPOINTS.getProfile, { headers });
         if (profileRes?.data && typeof profileRes.data === "object") {
-          userData = { ...profileRes.data, ...userData };
+          userData = mergeUserRecords(userData, unwrapUserPayload(profileRes.data));
         }
       } catch {
         /* optional */
@@ -346,6 +352,7 @@ function AttendancePage() {
 
     if (isProfileIncompleteUser(userData)) {
       profileIncompleteWarnedRef.current = true;
+      setMissingProfileFields(getMissingProfileFieldsFromUser(userData));
       setShowProfileIncompleteModal(true);
     }
   };
@@ -404,8 +411,8 @@ function AttendancePage() {
       });
 
       // Backend is source of truth for incomplete profile (check-in only).
-      const incompleteFromApi =
-        isCheckIn && Boolean(getProfileIncompletePayload(res.data));
+      const incompletePayload =
+        isCheckIn ? getProfileIncompletePayload(res.data) : null;
 
       toast.success(
         `Success: ${isCheckIn ? "Checked In" : "Checked Out"} successfully`
@@ -418,7 +425,11 @@ function AttendancePage() {
       // stopCamera clears the modal; re-open only if backend says incomplete
       // and capture-time warning did not already show (avoid duplicate).
       stopCamera();
-      if (incompleteFromApi && !profileIncompleteWarnedRef.current) {
+      if (incompletePayload && !profileIncompleteWarnedRef.current) {
+        const apiMissing = Array.isArray(incompletePayload.missingFields)
+          ? incompletePayload.missingFields
+          : [];
+        setMissingProfileFields(apiMissing);
         setShowProfileIncompleteModal(true);
       }
       profileIncompleteWarnedRef.current = false;
@@ -443,7 +454,13 @@ function AttendancePage() {
           return;
         }
       }
-      toast.error("Failed: Could not submit attendance");
+      const apiMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.response?.data?.msg ||
+        err.message;
+      console.error("Submit attendance failed:", err.response?.status, err.response?.data);
+      toast.error(`Failed: ${apiMsg || "Could not submit attendance"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -783,7 +800,10 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
 
       {isSelf && attendanceLocked && !isCapturing && (
         <p className="att-shake-hint" style={{ color: '#b91c1c', fontWeight: 600 }}>
-          Attendance locked — complete your profile or contact the administrator.
+          Attendance locked — complete your profile
+          {formatMissingProfileFields(missingProfileFields).length > 0
+            ? ` (missing: ${formatMissingProfileFields(missingProfileFields).join(', ')})`
+            : ''} or contact the administrator.
         </p>
       )}
 
@@ -923,6 +943,9 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
             </h3>
             <p style={{ margin: "0 0 1.25rem", color: "var(--att-muted)", lineHeight: 1.5 }}>
               {PROFILE_INCOMPLETE_ENTRY_MESSAGE}
+              {formatMissingProfileFields(missingProfileFields).length > 0
+                ? ` Missing: ${formatMissingProfileFields(missingProfileFields).join(', ')}.`
+                : ''}
             </p>
             <button
               type="button"
@@ -931,6 +954,14 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
               onClick={() => setShowProfileIncompleteModal(false)}
             >
               OK
+            </button>
+            <button
+              type="button"
+              className="att-cta"
+              style={{ width: "100%", margin: "0.6rem 0 0", background: "transparent", color: "inherit", border: "1px solid var(--att-muted)" }}
+              onClick={() => navigate("/profile")}
+            >
+              Complete Profile
             </button>
           </div>
         </div>

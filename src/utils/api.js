@@ -1,9 +1,9 @@
 
 
 // src/utils/api.js
-// Local dev (npm start): relative URLs → setupProxy.js forwards to Render (no CORS).
-// Production build: calls Render API directly.
-const PRODUCTION_API = 'https://uc-attendance-system-1ts2.onrender.com';
+// Local dev (npm start): relative URLs → setupProxy.js forwards to Linode (no CORS).
+// Production build: calls https://api.inout.urbancode.tech (Linode VPS + nginx + SSL).
+const PRODUCTION_API = 'https://api.inout.urbancode.tech';
 export const BASE_URL =
   process.env.REACT_APP_API_URL ||
   (process.env.NODE_ENV === 'production' ? PRODUCTION_API : '');

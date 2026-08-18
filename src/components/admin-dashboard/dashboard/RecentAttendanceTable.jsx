@@ -8,6 +8,7 @@ import {
   isAttendanceImageFailed,
   resolveAttendanceImageUrl,
 } from '../../../utils/attendanceImage';
+import { localDateYMD } from '../../../utils/localDate';
 import SafeImage from '../../common/SafeImage';
 
 const formatTime = (ts) =>
@@ -35,8 +36,12 @@ const RecentAttendanceTable = ({ logs = [], selectedDate = '' }) => {
     const grouped = {};
 
     logList.forEach((log) => {
-      const dateKey = new Date(log.timestamp).toDateString();
-      const key = `${log.userId || log.employeeName}-${dateKey}`;
+      const dateKey = localDateYMD(log.timestamp) || new Date(log.timestamp).toDateString();
+      const personId = String(
+        log.employeeId || log.userId || log.user || log.employeeName || ''
+      ).trim();
+      const key = `${personId}-${dateKey}`;
+      const type = String(log.type || '').trim().toLowerCase();
 
       if (!grouped[key]) {
         grouped[key] = {
@@ -53,10 +58,11 @@ const RecentAttendanceTable = ({ logs = [], selectedDate = '' }) => {
       if (log.employeeId) grouped[key].employeeId = log.employeeId;
       if (log.profilePic) grouped[key].profilePic = log.profilePic;
       if (log.employeeName) grouped[key].employeeName = log.employeeName;
+      if (log.userId) grouped[key].userId = log.userId;
 
-      if (log.type === 'check-in') {
+      if (type === 'check-in' || type === 'checkin') {
         grouped[key].checkIn = log;
-      } else if (log.type === 'check-out') {
+      } else if (type === 'check-out' || type === 'checkout') {
         grouped[key].checkOut = log;
       }
     });

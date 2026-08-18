@@ -3,6 +3,10 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { API_ENDPOINTS } from '../../utils/api';
+import {
+  formatMissingProfileFields,
+  inferMissingProfileFields,
+} from '../../utils/attendanceLock';
 
 export default function ProfileCard() {
   const [profile, setProfile] = useState({
@@ -192,6 +196,8 @@ export default function ProfileCard() {
     return <div className="loading">Loading profile...</div>;
   }
 
+  const missingLabels = formatMissingProfileFields(inferMissingProfileFields(profile));
+
   return (
     <div className="profile-container">
       <div className="profile-toolbar">
@@ -204,6 +210,23 @@ export default function ProfileCard() {
           </div>
         )}
       </div>
+      {missingLabels.length > 0 && (
+        <div
+          className="profile-incomplete-banner"
+          style={{
+            margin: '0 0 1rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 8,
+            background: '#fef3c7',
+            color: '#92400e',
+            fontSize: 14,
+            lineHeight: 1.45,
+          }}
+        >
+          Profile incomplete — fill these to avoid attendance lock:{' '}
+          <strong>{missingLabels.join(', ')}</strong>
+        </div>
+      )}
       <div className="profile-content">
         {/* Left Column */}
         <div className="column">
@@ -311,7 +334,7 @@ export default function ProfileCard() {
                   )}
                 </div>
                  <div className="info-item">
-                 Date of Birth: 
+                 Date of Birth *: 
                 {(editing === 'company' || isEditingAll) ? (
                   <input
                     type="date"
@@ -337,7 +360,7 @@ export default function ProfileCard() {
                   )}
                 </div>
                 <div className="info-item">
-                   Address: 
+                   Address *: 
                   {(editing === 'basicInfo' || isEditingAll) ? (
                     <input
                       type="text"
@@ -351,7 +374,7 @@ export default function ProfileCard() {
                 </div>
                 
                 <div className="info-item">
-                   Blood Group: 
+                   Blood Group *: 
                   {(editing === 'basicInfo' || isEditingAll) ? (
                     <input
                       type="text"
@@ -572,7 +595,7 @@ export default function ProfileCard() {
             </div>
             <div className="banking-info">
               <div className="info-row">
-                 Bank Name: 
+                 Bank Name *: 
                 {(editing === 'bankDetails' || isEditingAll) ? (
                   <input
                     type="text"
@@ -585,7 +608,7 @@ export default function ProfileCard() {
                 )}
               </div>
               <div className="info-row">
-                 Account Number: 
+                 Account Number *: 
                 {(editing === 'bankDetails' || isEditingAll) ? (
                   <input
                     type="text"
@@ -598,7 +621,7 @@ export default function ProfileCard() {
                 )}
               </div>
               <div className="info-row">
-                 IFSC Code: 
+                 IFSC Code *: 
                 {(editing === 'bankDetails' || isEditingAll) ? (
                   <input
                     type="text"

@@ -25,7 +25,7 @@ module.exports = function (app) {
         return isApiPath && !isPageNavigation;
       },
       {
-        target: 'https://uc-attendance-system-1ts2.onrender.com',
+        target: 'https://api.inout.urbancode.tech',
         changeOrigin: true,
         secure: true,
         logLevel: 'silent',
