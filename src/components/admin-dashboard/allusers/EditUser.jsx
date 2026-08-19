@@ -26,6 +26,7 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
     rolesAndResponsibility: [],
     works: [emptyWork()],
     isActive: true,
+    skipAttendanceReminders: false,
     adminComments: '',
     employeeId: '',
     branch: '',
@@ -59,6 +60,7 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
           works: works.length ? works : [emptyWork()],
           bankDetails: data.bankDetails || {},
           isActive: data.isActive ?? false,
+          skipAttendanceReminders: data.skipAttendanceReminders === true,
           branch: extractBranchFromUser(data),
         });
       })
@@ -294,6 +296,16 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
               <div className="uc-form-check">
                 <input type="checkbox" id="isActive" name="isActive" checked={form.isActive} onChange={handleChange} />
                 <label htmlFor="isActive">Active User</label>
+              </div>
+              <div className="uc-form-check">
+                <input
+                  type="checkbox"
+                  id="skipAttendanceReminders"
+                  name="skipAttendanceReminders"
+                  checked={Boolean(form.skipAttendanceReminders)}
+                  onChange={handleChange}
+                />
+                <label htmlFor="skipAttendanceReminders">Skip attendance reminder emails</label>
               </div>
             </div>
           </div>

@@ -68,6 +68,7 @@ export const buildUserUpdatePayload = (form) => {
       officeBranch: branch,
     },
     isActive: synced.isActive !== false,
+    skipAttendanceReminders: synced.skipAttendanceReminders === true,
     adminComments: synced.adminComments || '',
     employeeId: synced.employeeId || '',
   };
