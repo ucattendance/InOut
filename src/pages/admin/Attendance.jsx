@@ -60,7 +60,7 @@ const Attendance = () => {
   if (loading) return <Loader />;
 
   return (
-    <div>
+    <div className="uc-page">
       {/* Header bar with Title & Locked Users Button */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Attendance Records</h1>

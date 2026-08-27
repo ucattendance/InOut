@@ -17,6 +17,7 @@ const TopNavbar = () => {
   }, []);
 
   const firstName = adminName.split(' ')[0] || 'Admin';
+  const notificationCount = 0;
 
   return (
     <header className="admin-topnav admin-topnav-v2">
@@ -28,7 +29,9 @@ const TopNavbar = () => {
       <div className="admin-topnav-right">
         <button type="button" className="admin-topnav-bell" aria-label="Notifications">
           <FiBell />
-          <span className="admin-topnav-bell-badge">1</span>
+          {notificationCount > 0 && (
+            <span className="admin-topnav-bell-badge">{notificationCount}</span>
+          )}
         </button>
         <div className="admin-topnav-profile">
           <div className="admin-topnav-avatar" aria-hidden>

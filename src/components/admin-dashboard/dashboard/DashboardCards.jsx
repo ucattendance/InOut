@@ -14,13 +14,14 @@ const Spark = ({ color }) => (
   </svg>
 );
 
-const DashboardCards = ({ data }) => {
+const DashboardCards = ({ data, isToday = true }) => {
   const total = data?.totalEmployees || 0;
   const present = data?.presentToday || 0;
   const onLeave = data?.onLeaveToday || 0;
   const absent = data?.absentToday ?? Math.max(0, total - present - onLeave);
 
   const pct = (n) => (total > 0 ? `${((n / total) * 100).toFixed(2)}% of total` : '0% of total');
+  const dayWord = isToday ? 'Today' : '';
 
   const cards = [
     {
@@ -34,7 +35,7 @@ const DashboardCards = ({ data }) => {
     },
     {
       key: 'present',
-      label: 'Present Today',
+      label: dayWord ? `Present ${dayWord}` : 'Present',
       value: present,
       sub: pct(present),
       tone: 'blue',
@@ -43,7 +44,7 @@ const DashboardCards = ({ data }) => {
     },
     {
       key: 'leave',
-      label: 'On Leave Today',
+      label: dayWord ? `On Leave ${dayWord}` : 'On Leave',
       value: onLeave,
       sub: pct(onLeave),
       tone: 'orange',
@@ -52,7 +53,7 @@ const DashboardCards = ({ data }) => {
     },
     {
       key: 'absent',
-      label: 'Absent Today',
+      label: dayWord ? `Absent ${dayWord}` : 'Absent',
       value: absent,
       sub: pct(absent),
       tone: 'red',

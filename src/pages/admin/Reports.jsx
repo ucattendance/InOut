@@ -51,7 +51,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Loader from "../../components/admin-dashboard/common/Loader";
-import { getPrimaryWork } from "../../utils/userWorks";
+import { getPrimaryWork, getUserWorks } from "../../utils/userWorks";
 import {
   BRANCH_OPTIONS,
   isPhysicalOfficePresent,
@@ -278,6 +278,23 @@ const isActiveEmployee = (user) => {
   return true;
 };
 
+/** Leadership titles are not included in monthly attendance reports. */
+const isDirectorOrFounder = (user) => {
+  const titles = [
+    user?.position,
+    ...getUserWorks(user).map((w) => w.position),
+  ]
+    .map((t) => String(t || '').trim().toLowerCase().replace(/\s+/g, ' '))
+    .filter(Boolean);
+
+  return titles.some((title) => {
+    if (title === 'director') return true;
+    if (title.includes('managing director')) return true;
+    if (title.includes('founder')) return true;
+    return false;
+  });
+};
+
 const findUserForEmployee = (displayName, schedules, allUsers, logs) => {
   const { resolvedUserId, schedule } = resolveEmployeeContext(displayName, schedules, allUsers, logs);
 
@@ -300,15 +317,59 @@ const findUserForEmployee = (displayName, schedules, allUsers, logs) => {
   return null;
 };
 
-const employeeIsActive = (displayName, schedules, allUsers, logs) => {
-  const user = findUserForEmployee(displayName, schedules, allUsers, logs);
-  return user ? isActiveEmployee(user) : false;
-};
-
 const employeeMatchesBranch = (displayName, schedules, allUsers, logs, filterBranch) => {
   if (!filterBranch || filterBranch === 'All') return true;
   const user = findUserForEmployee(displayName, schedules, allUsers, logs);
   return user ? matchesBranchFilter(user, filterBranch) : false;
+};
+
+const canonicalEmployeeName = (user, fallback) =>
+  (user?.name || fallback || '').trim().replace(/\s+/g, ' ');
+
+/** One card per person — merge duplicate user rows, log names, and schedule names. */
+const uniqueEmployeeNames = (allUsers = [], logs = [], schedules = []) => {
+  const seen = new Set();
+  const names = [];
+
+  const resolveUser = (rawName, userHint) => {
+    const hintId = userHint?._id || userHint?.id;
+    if (hintId) {
+      const fromList = allUsers.find((u) => String(u._id) === String(hintId));
+      if (fromList) return fromList;
+    }
+    return findUserForEmployee(rawName, schedules, allUsers, logs);
+  };
+
+  const consider = (rawName, userHint) => {
+    const display = (rawName || '').trim();
+    if (!display || display === 'Unknown') return;
+
+    const user = resolveUser(display, userHint);
+    if (!user || !isActiveEmployee(user) || isDirectorOrFounder(user)) return;
+
+    const id = user._id != null ? String(user._id) : '';
+    const empId = String(user.employeeId || '').trim().toLowerCase();
+    const nk = normalizeName(user.name || display);
+    const keys = [id && `id:${id}`, empId && `emp:${empId}`, nk && `name:${nk}`].filter(Boolean);
+
+    if (keys.some((k) => seen.has(k))) return;
+    keys.forEach((k) => seen.add(k));
+    names.push(canonicalEmployeeName(user, display));
+  };
+
+  allUsers.forEach((u) => consider(u?.name, u));
+  logs.forEach((log) => {
+    if (!log) return;
+    const uid = logUserId(log);
+    const hinted = uid ? allUsers.find((u) => String(u._id) === uid) : log.user;
+    consider(logEmployeeLabel(log), hinted && typeof hinted === 'object' ? hinted : null);
+  });
+  schedules.forEach((sch) => {
+    const schUser = sch?.user && typeof sch.user === 'object' ? sch.user : null;
+    consider(schUser?.name || sch?.name || sch?.employeeName, schUser);
+  });
+
+  return names;
 };
 
 
@@ -469,20 +530,7 @@ const Report = () => {
 
 
   const employees = useMemo(() => {
-    const names = new Set();
-    allUsers.forEach((u) => {
-      if (isActiveEmployee(u) && u.name) names.add(u.name);
-    });
-    logs.forEach((log) => {
-      const label = logEmployeeLabel(log);
-      if (label && label !== 'Unknown') names.add(label);
-    });
-    schedules.forEach((sch) => {
-      const n = sch.user?.name || sch.name;
-      if (n) names.add(n);
-    });
-    return [...names]
-      .filter((employee) => employeeIsActive(employee, schedules, allUsers, logs))
+    return uniqueEmployeeNames(allUsers, logs, schedules)
       .filter((employee) => employeeMatchesBranch(employee, schedules, allUsers, logs, filterBranch))
       .filter((employee) => employee.toLowerCase().includes(searchTerm.toLowerCase()))
       .sort((a, b) => a.localeCompare(b));
@@ -876,150 +924,98 @@ const Report = () => {
                   : 0;
 
                 return (
-                  <div key={employee} id={`employee-section-${index}`} style={{ marginBottom: "20px" }}>
-                    <Card key={employee} elevation={3} sx={{ mb: 4, border: '1px solid #ddd' }}>
+                  <div key={resolvedUserId || employee} id={`employee-section-${index}`} style={{ marginBottom: "20px" }}>
+                    <Card elevation={3} sx={{ mb: 4, border: '1px solid #ddd' }}>
                       <CardContent>
-                        {/* Employee Summary Section */}
-                        <Grid container spacing={3} mb={4}>
-                          <Grid size={{ xs: 12, md: 4 }}>
-                            <Stack spacing={2}>
-                              <Stack direction="row" spacing={3} alignItems="center">
-                                <Avatar sx={{ width: 60, height: 60 }}>
-                                  <PersonIcon size={36} />
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="h5">{employee}</Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {position}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {company}
-                                  </Typography>
-                                  {branchLabel && (
-                                    <Chip
-                                      label={branchLabel}
-                                      size="small"
-                                      sx={{ mt: 0.5 }}
-                                      color={
-                                        branchLabel === 'Chennai Velachery'
-                                          ? 'primary'
-                                          : branchLabel === 'Chennai Pallikarani'
-                                            ? 'success'
-                                            : 'warning'
-                                      }
-                                      variant="outlined"
-                                    />
-                                  )}
-                                </Box>
-                              </Stack>
+                        <Stack spacing={2} mb={4}>
+                          <Stack direction="row" spacing={3} alignItems="center">
+                            <Avatar sx={{ width: 60, height: 60 }}>
+                              <PersonIcon size={36} />
+                            </Avatar>
+                            <Box>
+                              <Typography variant="h5">{employee}</Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {position}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                {company}
+                              </Typography>
+                              {branchLabel && (
+                                <Chip
+                                  label={branchLabel}
+                                  size="small"
+                                  sx={{ mt: 0.5 }}
+                                  color={
+                                    branchLabel === 'Chennai Velachery'
+                                      ? 'primary'
+                                      : branchLabel === 'Chennai Pallikarani'
+                                        ? 'success'
+                                        : 'warning'
+                                  }
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
+                          </Stack>
 
-                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                <Paper
-                                  elevation={1}
-                                  sx={{
-                                    p: 2,
-                                    flex: 1,
-                                    minWidth: 0,
-                                    border: '1px solid #ddd',
-                                    textAlign: 'center',
-                                  }}
-                                >
-                                  <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
-                                    <WorkDaysIcon color="#757575" size={22} />
-                                    <Typography variant="h6">
-                                      {scheduledWorkingDays}
-                                    </Typography>
-                                  </Stack>
-                                  <Typography variant="body2">Scheduled Work Days</Typography>
-                                </Paper>
-                                <Paper
-                                  elevation={1}
-                                  sx={{
-                                    p: 2,
-                                    flex: 1,
-                                    minWidth: 0,
-                                    border: '1px solid #ddd',
-                                    textAlign: 'center',
-                                  }}
-                                >
-                                  <Typography variant="h6" color="error">
-                                    {absentCount}
+                          <Box
+                            sx={{
+                              display: 'grid',
+                              gridTemplateColumns: {
+                                xs: 'repeat(2, minmax(0, 1fr))',
+                                sm: 'repeat(3, minmax(0, 1fr))',
+                                md: 'repeat(5, minmax(0, 1fr))',
+                              },
+                              gap: 2,
+                              alignItems: 'stretch',
+                            }}
+                          >
+                            {[
+                              {
+                                label: 'Scheduled Work Days',
+                                value: scheduledWorkingDays,
+                                icon: <WorkDaysIcon color="#757575" size={22} />,
+                              },
+                              { label: 'Absent Days', value: absentCount, color: 'error' },
+                              { label: 'Present Days', value: presentCount, color: 'primary' },
+                              { label: 'Holidays', value: holidayCount, sx: { color: '#7c3aed' } },
+                              { label: 'Leaves', value: leaveCount, color: 'info.main' },
+                              { label: 'WFH Days', value: wfhCount, color: 'success.main' },
+                              {
+                                label: 'Attendance',
+                                value: `${attendancePercentage}%`,
+                                color: attendancePercentage >= 90 ? 'success.main' : 'warning.main',
+                              },
+                              { label: 'Late Arrivals', value: lateCount, color: 'warning.main' },
+                              { label: 'Early Departures', value: earlyCount, color: 'warning.main' },
+                              { label: 'Missing Check-Out', value: incompleteDays, color: 'warning.main' },
+                            ].map((item) => (
+                              <Paper
+                                key={item.label}
+                                elevation={1}
+                                sx={{
+                                  p: 2,
+                                  height: '100%',
+                                  minHeight: 88,
+                                  border: '1px solid #ddd',
+                                  textAlign: 'center',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                                  {item.icon}
+                                  <Typography variant="h6" color={item.color} sx={item.sx}>
+                                    {item.value}
                                   </Typography>
-                                  <Typography variant="body2">Absent Days</Typography>
-                                </Paper>
-                              </Stack>
-                            </Stack>
-                          </Grid>
-
-                          <Grid size={{ xs: 12, md: 8 }}>
-                            <Grid container spacing={2}>
-                              <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, height: '100%', textAlign: "center", border: '1px solid #ddd' }}>
-                                  <Typography variant="h6" color="primary">
-                                    {presentCount}
-                                  </Typography>
-                                  <Typography variant="body2">Present Days</Typography>
-                                </Paper>
-                              </Grid>
-                              <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
-                                  <Typography variant="h6" sx={{ color: '#7c3aed' }}>
-                                    {holidayCount}
-                                  </Typography>
-                                  <Typography variant="body2">Holidays</Typography>
-                                </Paper>
-                              </Grid>
-                              <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
-                                  <Typography variant="h6" color="info.main">
-                                    {leaveCount}
-                                  </Typography>
-                                  <Typography variant="body2">Leaves</Typography>
-                                </Paper>
-                              </Grid>
-                              <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
-                                  <Typography variant="h6" color="success.main">
-                                    {wfhCount}
-                                  </Typography>
-                                  <Typography variant="body2">WFH Days</Typography>
-                                </Paper>
-                              </Grid>
-                              <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
-                                  <Typography variant="h6" color={attendancePercentage >= 90 ? "success.main" : "warning.main"}>
-                                    {attendancePercentage}%
-                                  </Typography>
-                                  <Typography variant="body2">Attendance</Typography>
-                                </Paper>
-                              </Grid>
-                              <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
-                                  <Typography variant="h6" color="warning.main">
-                                    {lateCount}
-                                  </Typography>
-                                  <Typography variant="body2">Late Arrivals</Typography>
-                                </Paper>
-                              </Grid>
-                              <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
-                                  <Typography variant="h6" color="warning.main">
-                                    {earlyCount}
-                                  </Typography>
-                                  <Typography variant="body2">Early Departures</Typography>
-                                </Paper>
-                              </Grid>
-                              <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-                                <Paper elevation={1} sx={{ p: 2, height: '100%', border: '1px solid #ddd', textAlign: "center" }}>
-                                  <Typography variant="h6" color="warning.main">
-                                    {incompleteDays}
-                                  </Typography>
-                                  <Typography variant="body2">Missing Check-Out</Typography>
-                                </Paper>
-                              </Grid>
-                            </Grid>
-                          </Grid>
-                        </Grid>
+                                </Stack>
+                                <Typography variant="body2">{item.label}</Typography>
+                              </Paper>
+                            ))}
+                          </Box>
+                        </Stack>
                         <Button
                           variant="outlined"
                           onClick={() => setOpenIndex(openIndex === index ? null : index)}

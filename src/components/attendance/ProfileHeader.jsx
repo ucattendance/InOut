@@ -51,6 +51,7 @@ function ProfileHeader({ theme, toggleTheme }) {
   };
 
   const firstName = (user.name || 'there').split(' ')[0];
+  const notificationCount = 0;
 
   return (
     <div className="att-profile-header">
@@ -77,7 +78,9 @@ function ProfileHeader({ theme, toggleTheme }) {
       <div className="att-profile-actions">
         <button type="button" className="att-icon-btn" title="Notifications">
           <FiBell />
-          <span className="att-badge">3</span>
+          {notificationCount > 0 && (
+            <span className="att-badge">{notificationCount}</span>
+          )}
         </button>
         {typeof toggleTheme === 'function' && (
           <button

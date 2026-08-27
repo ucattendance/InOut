@@ -21,7 +21,7 @@ const fetchDashboardLogs = async (dateFilter, headers, users = []) => {
   const datedUrl = `${API_ENDPOINTS.getRecentDashboardLogs}?date=${encodeURIComponent(dateFilter)}&_=${Date.now()}`;
   try {
     const datedRes = await axios.get(datedUrl, { headers });
-    const dated = normalizeLogs(datedRes.data);
+    const dated = filterLogsByDate(normalizeLogs(datedRes.data), dateFilter);
     if (dated.length > 0) return dated;
   } catch {
     /* try wider window */
@@ -41,7 +41,7 @@ const fetchDashboardLogs = async (dateFilter, headers, users = []) => {
       `${API_ENDPOINTS.getAttendanceByDate(dateFilter)}?_=${Date.now()}`,
       { headers }
     );
-    const byDate = normalizeLogs(byDateRes.data);
+    const byDate = filterLogsByDate(normalizeLogs(byDateRes.data), dateFilter);
     if (byDate.length > 0) return byDate;
   } catch {
     /* try full history */
@@ -117,19 +117,7 @@ const Dashboard = () => {
           }
         }
 
-        const todayStr = localDateYMD();
-        let todayLogs = logsData;
-        if (!isSameLocalDay(dateFilter, todayStr)) {
-          try {
-            todayLogs = enrichLogNames(
-              await fetchDashboardLogs(todayStr, headers, users),
-              users
-            );
-          } catch {
-            todayLogs = [];
-          }
-        }
-        setSummary(buildSummaryFromLogs(todayLogs, users, todayStr));
+        setSummary(buildSummaryFromLogs(logsData, users, dateFilter));
         if (logsData.length > 0) {
           setFetchError((prev) => (prev?.includes('employee list') ? prev : ''));
         }
@@ -178,6 +166,11 @@ const Dashboard = () => {
   }, [logs, search, dateFilter, typeFilter, locationFilter, companyFilter, filterBranch, allUsers]);
 
   const logsForSelectedDate = logs.filter((log) => isSameLocalDay(log.timestamp, dateFilter));
+  const isSelectedToday = isSameLocalDay(dateFilter, localDateYMD());
+  const dateLabel = (() => {
+    const m = String(dateFilter || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : dateFilter;
+  })();
 
   const usersForBranch =
     filterBranch === 'All'
@@ -190,8 +183,14 @@ const Dashboard = () => {
     <div className="uc-page dash-page">
       <div className="dash-page-header">
         <div>
-          <h1 className="dash-page-title">Today&apos;s Attendance Report</h1>
-          <p className="dash-breadcrumb">Dashboard • Today&apos;s Attendance</p>
+          <h1 className="dash-page-title">
+            {isSelectedToday ? "Today's Attendance Report" : 'Attendance Report'}
+          </h1>
+          <p className="dash-breadcrumb">
+            {isSelectedToday
+              ? "Dashboard • Today's Attendance"
+              : `Dashboard • ${dateLabel}`}
+          </p>
         </div>
         <ReportGenerator
           logs={filteredLogs}
@@ -200,7 +199,7 @@ const Dashboard = () => {
         />
       </div>
 
-      {summary && <DashboardCards data={summary} />}
+      {summary && <DashboardCards data={summary} isToday={isSelectedToday} />}
 
       {fetchError && (
         <div className="dash-alert" role="alert">

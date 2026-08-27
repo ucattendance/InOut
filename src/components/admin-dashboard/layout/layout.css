@@ -139,7 +139,7 @@
 .admin-content {
   flex: 1;
   padding: 1.5rem;
-  padding-top: 4rem;
+  padding-top: 5.25rem; /* 4rem fixed navbar + gap so page actions don't sit on the bar */
   overflow-y: auto;
 }
 
