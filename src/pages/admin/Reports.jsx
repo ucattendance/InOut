@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { API_ENDPOINTS } from "../../utils/api";
+import { localDateYMD } from "../../utils/localDate";
 import { FiRefreshCw, FiHome as WFHIcon } from 'react-icons/fi';
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -398,17 +399,6 @@ const getDayName = (date) => {
   return date.toLocaleDateString("en-US", { weekday: "long" });
 };
 
-/** Calendar date key YYYY-MM-DD without timezone shift (fixes UTC holiday dates). */
-const toDateKey = (date) => {
-  if (!date) return '';
-  const str = String(date);
-  const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
 const normalizeHolidayList = (data) => {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.holidays)) return data.holidays;
@@ -419,7 +409,7 @@ const normalizeHolidayList = (data) => {
 const filterHolidaysForMonth = (list, year, monthIndex0) => {
   const month = monthIndex0 + 1;
   return normalizeHolidayList(list).filter((h) => {
-    const key = toDateKey(h.date);
+    const key = localDateYMD(h.date);
     if (!key) return false;
     const [y, m] = key.split('-').map(Number);
     return y === year && m === month;
@@ -501,26 +491,26 @@ const Report = () => {
   );
 
   const holidayDateKeys = useMemo(
-    () => new Set(holidays.map((h) => toDateKey(h.date)).filter(Boolean)),
+    () => new Set(holidays.map((h) => localDateYMD(h.date)).filter(Boolean)),
     [holidays]
   );
 
-  const isHoliday = (date) => holidayDateKeys.has(toDateKey(date));
+  const isHoliday = (date) => holidayDateKeys.has(localDateYMD(date));
 
   const getHolidayName = (date) => {
-    const key = toDateKey(date);
-    const holiday = holidays.find((h) => toDateKey(h.date) === key);
+    const key = localDateYMD(date);
+    const holiday = holidays.find((h) => localDateYMD(h.date) === key);
     return holiday ? holiday.name : null;
   };
 
   const getApprovedLeaveOnDate = (employeeName, dateObj) => {
-    const key = toDateKey(dateObj);
+    const key = localDateYMD(dateObj);
     const empKey = normalizeName(employeeName);
     return approvedLeaves.find((leave) => {
       const name = leave.user?.name || leave.employeeName;
       if (normalizeName(name) !== empKey) return false;
       if ((leave.status || '').toLowerCase() !== 'approved') return false;
-      return eachDateInRange(leave.fromDate, leave.toDate).some((d) => toDateKey(d) === key);
+      return eachDateInRange(leave.fromDate, leave.toDate).some((d) => localDateYMD(d) === key);
     });
   };
 
