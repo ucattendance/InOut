@@ -143,9 +143,11 @@ const PayslipGenerator = () => {
       const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
       const scheduled = weeklySchedule[dayName];
 
-      if (!scheduled || scheduled.isLeave || date.getDay() === 0 || date.getDay() === 6) {
-        // Weekend / scheduled off = weekly off, not personal leave
-        if (scheduled?.isLeave && date.getDay() !== 0 && date.getDay() !== 6) leaveDays++;
+      if (!scheduled || date.getDay() === 0) {
+        return;
+      }
+      if (scheduled.isLeave && date.getDay() !== 6) {
+        leaveDays++;
         return;
       }
 

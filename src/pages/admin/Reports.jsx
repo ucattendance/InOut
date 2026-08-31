@@ -254,8 +254,9 @@ const resolveEmployeeContext = (employeeName, schedules, allUsers, logs) => {
 };
 
 const isScheduledWorkDay = (dateObj, weeklySchedule, isHolidayDate) => {
-  // Sat + Sun are office weekly offs by default
-  if (isHolidayDate || dateObj.getDay() === 0 || dateObj.getDay() === 6) return false;
+  // Sunday is office weekly off by default; Saturday is a working day
+  if (isHolidayDate || dateObj.getDay() === 0) return false;
+  if (dateObj.getDay() === 6) return true;
 
   const norm = normalizeWeeklySchedule(weeklySchedule);
   const hasConfig = Object.keys(norm).length > 0;
@@ -266,9 +267,9 @@ const isScheduledWorkDay = (dateObj, weeklySchedule, isHolidayDate) => {
   return !daySchedule.isLeave;
 };
 
-/** Weekend + schedule.isLeave = office weekly off (not personal leave). */
+/** Sunday + schedule.isLeave = office weekly off (not personal leave). Saturday is a working day. */
 const isOfficeLeaveDay = (dateObj, scheduled) =>
-  dateObj.getDay() === 0 || dateObj.getDay() === 6 || !!scheduled?.isLeave;
+  dateObj.getDay() === 0 || (dateObj.getDay() !== 6 && !!scheduled?.isLeave);
 
 /** Active employee — same rule as All Users (not past / disabled). */
 const isActiveEmployee = (user) => {
@@ -612,13 +613,10 @@ const Report = () => {
           status = getHolidayName(dateObj) || 'Holiday';
         } else if (approvedLeave) {
           status = `Leave (${approvedLeave.leaveType || 'Approved'})`;
-        } else if (isOfficeLeaveDay(dateObj, scheduled) && checkIn) {
-          const presentType = isPhysicalOfficePresent(checkIn.officeName) ? 'Present' : 'WFH';
-          status = `${presentType} (Office Leave)`;
-        } else if (isOfficeLeaveDay(dateObj, scheduled)) {
-          status = (dateObj.getDay() === 0 || dateObj.getDay() === 6) ? 'Office Leave' : 'Leave';
         } else if (checkIn) {
           status = isPhysicalOfficePresent(checkIn.officeName) ? 'Present' : 'WFH';
+        } else if (isOfficeLeaveDay(dateObj, scheduled)) {
+          status = dateObj.getDay() === 0 ? 'Office Leave' : 'Leave';
         } else if (scheduled && !scheduled.isLeave) {
           status = 'Absent';
         }
@@ -1094,11 +1092,6 @@ const Report = () => {
                                   } else if (approvedLeave) {
                                     status = `Leave (${approvedLeave.leaveType || 'Approved'})`;
                                     statusColor = "info";
-                                  } else if (isOfficeLeaveDay(dateObj, scheduled)) {
-                                    status = (dateObj.getDay() === 0 || dateObj.getDay() === 6)
-                                      ? "Office Leave"
-                                      : "Scheduled Leave";
-                                    statusColor = "info";
                                   } else if (checkIn && checkOut) {
                                     isWFH = checkIn.officeName && !isPhysicalOfficePresent(checkIn.officeName);
 
@@ -1126,6 +1119,10 @@ const Report = () => {
                                   else if (checkIn && !checkOut) {
                                     status = "Incomplete";
                                     statusColor = "warning";
+                                  }
+                                  else if (isOfficeLeaveDay(dateObj, scheduled)) {
+                                    status = dateObj.getDay() === 0 ? "Office Leave" : "Scheduled Leave";
+                                    statusColor = "info";
                                   }
                                   else if (
                                     workDay &&
@@ -1196,9 +1193,7 @@ const Report = () => {
                                           : approvedLeave
                                             ? `Leave (${approvedLeave.leaveType || 'Approved'})`
                                             : isOfficeLeaveDay(dateObj, scheduled)
-                                              ? ((dateObj.getDay() === 0 || dateObj.getDay() === 6)
-                                                ? 'Office Leave'
-                                                : 'Scheduled Leave')
+                                              ? (dateObj.getDay() === 0 ? 'Office Leave' : 'Scheduled Leave')
                                               : `${scheduled?.start || "—"} - ${scheduled?.end || "—"}`}
                                       </TableCell>
                                       <TableCell align="center">{workHours}</TableCell>

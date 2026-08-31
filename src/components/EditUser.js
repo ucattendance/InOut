@@ -20,7 +20,7 @@ function EditUser() {
     Wednesday: { start: '09:00', end: '17:00', isLeave: false },
     Thursday: { start: '09:00', end: '17:00', isLeave: false },
     Friday: { start: '09:00', end: '17:00', isLeave: false },
-    Saturday: { start: '', end: '', isLeave: true },
+    Saturday: { start: '09:00', end: '17:00', isLeave: false },
     Sunday: { start: '', end: '', isLeave: true }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,7 +88,7 @@ function EditUser() {
               Wednesday: { start: '09:00', end: '17:00', isLeave: false },
               Thursday: { start: '09:00', end: '17:00', isLeave: false },
               Friday: { start: '09:00', end: '17:00', isLeave: false },
-              Saturday: { start: '', end: '', isLeave: true },
+              Saturday: { start: '09:00', end: '17:00', isLeave: false },
               Sunday: { start: '', end: '', isLeave: true }
             });
           }
