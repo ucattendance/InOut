@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       ftp_server_dir:
-        description: 'Remote folder (leave empty = public_html/)'
+        description: 'Remote folder override (leave empty = auto-detect)'
         required: false
         default: ''
 
@@ -45,29 +45,85 @@ jobs:
           if [ "$missing" -eq 1 ]; then exit 1; fi
           echo "Deploy credentials are set."
 
-      - name: Resolve upload directory
+      - name: Probe FTP and resolve upload directory
         id: ftpdir
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          dir="${{ github.event.inputs.ftp_server_dir }}"
-          if [ -z "$dir" ]; then
-            dir="${{ secrets.FTP_SERVER_DIR }}"
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+
+          # Strip accidental protocol prefix from secret
+          SERVER="${FTP_SERVER#ftp://}"
+          SERVER="${SERVER#ftps://}"
+          SERVER="${SERVER%%/*}"
+
+          override="${{ github.event.inputs.ftp_server_dir }}"
+          if [ -z "$override" ]; then
+            override="${{ secrets.FTP_SERVER_DIR }}"
           fi
-          # Hostinger FTP default folder is public_html (see hPanel → FTP Accounts).
-          if [ -z "$dir" ] || [ "$dir" = "/" ]; then
-            dir="public_html/"
+
+          probe() {
+            local path="$1"
+            lftp -c "
+              set ftp:ssl-allow no;
+              set ssl:verify-certificate no;
+              set net:timeout 20;
+              open -u '${FTP_USERNAME}','${FTP_PASSWORD}' -p 21 ${SERVER};
+              cd ${path};
+              ls;
+            " 2>/dev/null || true
+          }
+
+          echo "::group::FTP root listing"
+          ROOT_LIST=$(probe "/")
+          echo "$ROOT_LIST"
+          echo "::endgroup::"
+
+          echo "::group::FTP public_html listing"
+          PUB_LIST=$(probe "/public_html")
+          echo "$PUB_LIST"
+          echo "::endgroup::"
+
+          echo "::group::FTP domains/inout.urbancode.tech/public_html listing"
+          DOM_LIST=$(probe "/domains/inout.urbancode.tech/public_html")
+          echo "$DOM_LIST"
+          echo "::endgroup::"
+
+          pick=""
+          if [ -n "$override" ] && [ "$override" != "/" ]; then
+            pick="${override#/}"
+            pick="${pick%/}/"
+          elif echo "$ROOT_LIST" | grep -Eq '(^|[[:space:]])(index\.html|deploy-check\.html|static)([[:space:]]|$)'; then
+            # FTP home is already the live web root
+            pick="./"
+          elif echo "$PUB_LIST" | grep -Eq '(^|[[:space:]])(index\.html|deploy-check\.html|static)([[:space:]]|$)'; then
+            pick="public_html/"
+          elif echo "$DOM_LIST" | grep -Eq '(^|[[:space:]])(index\.html|deploy-check\.html|static)([[:space:]]|$)'; then
+            pick="domains/inout.urbancode.tech/public_html/"
+          elif echo "$ROOT_LIST" | grep -q 'public_html'; then
+            pick="public_html/"
+          else
+            echo "::error::Could not find live web root on FTP. Check File Manager path and FTP account."
+            exit 1
           fi
-          dir="${dir#/}"
-          case "$dir" in
-            */) ;;
-            *) dir="$dir/" ;;
-          esac
-          echo "Using remote server-dir: $dir"
-          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+          # SamKirkland expects relative server-dir without leading slash for most hosts
+          if [ "$pick" = "./" ]; then
+            pick="./"
+          fi
+
+          echo "Using remote server-dir: $pick"
+          echo "dir=$pick" >> "$GITHUB_OUTPUT"
+          echo "server=$SERVER" >> "$GITHUB_OUTPUT"
 
       - name: Deploy to Hostinger (FTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          server: ${{ steps.ftpdir.outputs.server }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
@@ -83,14 +139,15 @@ jobs:
             **/node_modules/**
 
       - name: Verify live deploy check page
-        continue-on-error: true
         run: |
-          sleep 30
+          sleep 45
           html=$(curl -fsS "https://inout.urbancode.tech/deploy-check.html" || true)
           echo "$html"
           if echo "$html" | grep -q "v2026.09.15-payslip"; then
             echo "Live site updated successfully."
           else
-            echo "::warning::Upload finished but live site still shows an old build."
-            echo "::warning::Confirm FTP_SERVER is 93.127.208.197 and upload folder is public_html/."
+            echo "::error::Upload finished but https://inout.urbancode.tech still shows an old build (Last-Modified not updated)."
+            echo "::error::Open Hostinger File Manager → public_html → check deploy-check.html date/version."
+            echo "::error::Also delete GitHub secret FTP_SERVER_DIR if it points to a wrong folder."
+            exit 1
           fi
