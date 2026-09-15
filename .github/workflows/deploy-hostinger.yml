@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       ftp_server_dir:
-        description: 'Remote folder (leave empty = FTP account root / = public_html)'
+        description: 'Remote folder (leave empty = public_html/)'
         required: false
         default: ''
 
@@ -52,10 +52,11 @@ jobs:
           if [ -z "$dir" ]; then
             dir="${{ secrets.FTP_SERVER_DIR }}"
           fi
-          # Domain FTP account root is already public_html for inout.urbancode.tech.
-          if [ -z "$dir" ] || [ "$dir" = "public_html" ] || [ "$dir" = "public_html/" ] || [ "$dir" = "/public_html" ] || [ "$dir" = "/public_html/" ]; then
-            dir="/"
+          # Hostinger FTP default folder is public_html (see hPanel → FTP Accounts).
+          if [ -z "$dir" ] || [ "$dir" = "/" ]; then
+            dir="public_html/"
           fi
+          dir="${dir#/}"
           case "$dir" in
             */) ;;
             *) dir="$dir/" ;;
@@ -87,9 +88,9 @@ jobs:
           sleep 30
           html=$(curl -fsS "https://inout.urbancode.tech/deploy-check.html" || true)
           echo "$html"
-          if echo "$html" | grep -q "v2026.08.17-linode"; then
+          if echo "$html" | grep -q "v2026.09.15-payslip"; then
             echo "Live site updated successfully."
           else
             echo "::warning::Upload finished but live site still shows an old build."
-            echo "::warning::FTP account root should be public_html — leave FTP_SERVER_DIR empty."
+            echo "::warning::Confirm FTP_SERVER is 93.127.208.197 and upload folder is public_html/."
           fi

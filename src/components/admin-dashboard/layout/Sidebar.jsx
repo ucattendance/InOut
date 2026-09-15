@@ -19,7 +19,7 @@ import {
   FiRefreshCw,
 } from 'react-icons/fi';
 
-export const APP_BUILD = 'v2026.09.01-fix';
+export const APP_BUILD = 'v2026.09.15-payslip';
 
 const menuItems = [
   { label: 'Dashboard', icon: <FiHome />, path: '/dashboard', tone: 'purple' },
