@@ -45,6 +45,7 @@ const PayslipGenerator = () => {
     bankAccountName: "",
     bankAccountNumber: "",
     dateOfJoining: "",
+    generatedDate: dayjs().format("YYYY-MM-DD"),
     // paymentDate: "",
     month: dayjs().format("MMMM YYYY"),
     workingDays: 0,
@@ -55,11 +56,16 @@ const PayslipGenerator = () => {
     totalDays: 0,
     presentDays: 0,
     empGrade: "",
+    tan: "",
+    pfNumber: "",
+    esiRegNumber: "",
     pan: "",
     uan: "",
     esiNumber: "",
     ifsc: "",
     ctc: "",
+    grossPay: "",
+    paidGrossPay: "",
     workingLocation: "Chennai",
     mobile: "",
     remittedOn: "",
@@ -405,6 +411,18 @@ const theme = createTheme({
               }
             />
           </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              type="date"
+              label="Generated Date"
+              InputLabelProps={{ shrink: true }}
+              value={employeeDetails.generatedDate}
+              onChange={(e) =>
+                setEmployeeDetails({ ...employeeDetails, generatedDate: e.target.value })
+              }
+            />
+          </Grid>
         </Grid>
  <Divider sx={{ my: 2 }} />
         {/* Statutory & Other Details */}
@@ -414,12 +432,17 @@ const theme = createTheme({
           </Typography>
           <Grid container spacing={2}>
             {[
+              { key: "tan", label: "Company TAN" },
+              { key: "pfNumber", label: "Company PF" },
+              { key: "esiRegNumber", label: "Company ESI" },
               { key: "empGrade", label: "Emp Grade" },
               { key: "pan", label: "PAN" },
               { key: "uan", label: "PF-UAN" },
               { key: "esiNumber", label: "ESI Number" },
               { key: "ifsc", label: "IFSC" },
               { key: "ctc", label: "CTC" },
+              { key: "grossPay", label: "Gross Pay (Optional Override)" },
+              { key: "paidGrossPay", label: "Paid Gross Pay (Optional Override)" },
               { key: "workingLocation", label: "Working Location" },
               { key: "mobile", label: "Mobile" },
             ].map(({ key, label }) => (
@@ -461,7 +484,9 @@ const theme = createTheme({
                   fullWidth
                   label={key.replace(/([A-Z])/g, " $1")}
                   value={employeeDetails[key]}
-                  InputProps={{ readOnly: true }}
+                  onChange={(e) =>
+                    setEmployeeDetails({ ...employeeDetails, [key]: e.target.value })
+                  }
                 />
               </Grid>
             ))}

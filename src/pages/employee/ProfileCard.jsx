@@ -7,6 +7,8 @@ import {
   formatMissingProfileFields,
   inferMissingProfileFields,
 } from '../../utils/attendanceLock';
+import { buildPayslipViewModel } from '../../utils/payslipViewModel';
+import { downloadPayslipPdf } from '../../utils/payslipPdf';
 
 export default function ProfileCard() {
   const [profile, setProfile] = useState({
@@ -44,6 +46,7 @@ export default function ProfileCard() {
   const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
   const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
   const [previewSrc, setPreviewSrc] = useState(null);
+  const [payslips, setPayslips] = useState([]);
 
   // Fetch user profile data from backend
   useEffect(() => {
@@ -103,6 +106,45 @@ export default function ProfileCard() {
       }
     };
   }, [previewSrc]);
+
+  useEffect(() => {
+    const fetchPayslips = async () => {
+      const token = localStorage.getItem('token');
+      try {
+        const response = await axios.get(API_ENDPOINTS.getPayslips, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPayslips(response.data || []);
+      } catch (error) {
+        console.error('Error fetching payslips:', error);
+      }
+    };
+    fetchPayslips();
+  }, []);
+
+  const generatePDF = async (payslip) => {
+    const {
+      employeeDetails,
+      incomes,
+      deductions,
+      totalIncome,
+      totalDeductions,
+      netPay,
+      month,
+    } = payslip;
+
+    const viewModel = buildPayslipViewModel(
+      { ...employeeDetails, employeeId: payslip.employeeId, month },
+      incomes,
+      deductions,
+      totalIncome,
+      totalDeductions,
+      netPay
+    );
+
+    const fileName = `Payslip_${(employeeDetails?.name || "Employee").replace(/\s+/g, "_")}_${(month || "").replace(/\s+/g, "_")}.pdf`;
+    await downloadPayslipPdf(viewModel, fileName);
+  };
 
   const handleInputChange = (field, value) => {
     setProfile(prev => ({
@@ -722,6 +764,35 @@ export default function ProfileCard() {
               </div>
             </div>
           </div>
+
+          {/* My Payslips Card */}
+          <div className="card">
+            <div className="card-header">
+              <h3>My Payslips</h3>
+            </div>
+            <div className="payslips-info" style={{ padding: '1rem' }}>
+              {payslips.length === 0 ? (
+                <div style={{ color: '#666', fontStyle: 'italic' }}>No payslips found</div>
+              ) : (
+                payslips.map((payslip) => (
+                  <div key={payslip._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>{payslip.month}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#666' }}>Net Pay: ₹{payslip.netPay?.toFixed(2)}</div>
+                    </div>
+                    <button 
+                      className="save-btn main-save" 
+                      style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                      onClick={() => generatePDF(payslip)}
+                    >
+                      Download
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

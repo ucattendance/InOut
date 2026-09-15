@@ -46,8 +46,16 @@ export function buildPayslipViewModel(employeeDetails = {}, incomes = [], deduct
   const daysInMonth = Number(employeeDetails.totalDays || 0);
   const lopDays = Number(employeeDetails.absentDays || 0);
   const paidDays = Math.max(daysInMonth - lopDays, 0);
-  const grossPay = Number(totalIncome || 0);
-  const paidGrossPay = daysInMonth > 0 ? (grossPay / daysInMonth) * paidDays : grossPay;
+  const calculatedGrossPay = Number(totalIncome || 0);
+  const calculatedPaidGrossPay = daysInMonth > 0 ? (calculatedGrossPay / daysInMonth) * paidDays : calculatedGrossPay;
+
+  const grossPay = employeeDetails.grossPay !== "" && employeeDetails.grossPay !== undefined
+    ? Number(employeeDetails.grossPay)
+    : calculatedGrossPay;
+
+  const paidGrossPay = employeeDetails.paidGrossPay !== "" && employeeDetails.paidGrossPay !== undefined
+    ? Number(employeeDetails.paidGrossPay)
+    : calculatedPaidGrossPay;
 
   const monthLabel = employeeDetails.month || "";
   const netPayNum = Number(netPay || 0);
@@ -74,7 +82,9 @@ export function buildPayslipViewModel(employeeDetails = {}, incomes = [], deduct
       (employeeDetails.employeeId
         ? `PS-${employeeDetails.employeeId}-${monthLabel.replace(/\s+/g, "")}`
         : ""),
-    generatedOn: dayjs().format("DD-MMM-YYYY"),
+    generatedOn: employeeDetails.generatedDate
+      ? dayjs(employeeDetails.generatedDate).format("DD-MMM-YYYY")
+      : dayjs().format("DD-MMM-YYYY"),
 
     name: employeeDetails.name || "",
     empId: employeeDetails.employeeId || "",
