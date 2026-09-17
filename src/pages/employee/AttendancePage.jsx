@@ -18,9 +18,12 @@ import {
   FiX,
   FiGrid,
   FiMoreHorizontal,
+  FiDownload,
 } from "react-icons/fi";
 
 import { API_ENDPOINTS, logoutUser } from "../../utils/api";
+import { buildPayslipViewModel } from "../../utils/payslipViewModel";
+import { downloadPayslipPdf } from "../../utils/payslipPdf";
 import { alertToast } from "../../utils/interactiveToast";
 import {
   ATTENDANCE_LOCKED_MESSAGE,
@@ -63,6 +66,9 @@ function AttendancePage() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [showPayslipsModal, setShowPayslipsModal] = useState(false);
+  const [payslips, setPayslips] = useState([]);
+  const [payslipsLoading, setPayslipsLoading] = useState(false);
   const [calendarViewDate, setCalendarViewDate] = useState(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comment, setComment] = useState('');
@@ -471,6 +477,48 @@ function AttendancePage() {
     navigate("/login");
   };
 
+  const openPayslipsModal = async () => {
+    setShowPayslipsModal(true);
+    setPayslipsLoading(true);
+    const token = localStorage.getItem("token");
+    try {
+      const response = await axios.get(API_ENDPOINTS.getPayslips, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPayslips(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Error fetching payslips:", error);
+      toast.error("Failed to load payslips");
+      setPayslips([]);
+    } finally {
+      setPayslipsLoading(false);
+    }
+  };
+
+  const downloadPayslip = async (payslip) => {
+    const {
+      employeeDetails,
+      incomes,
+      deductions,
+      totalIncome,
+      totalDeductions,
+      netPay,
+      month,
+    } = payslip;
+
+    const viewModel = buildPayslipViewModel(
+      { ...employeeDetails, employeeId: payslip.employeeId, month },
+      incomes,
+      deductions,
+      totalIncome,
+      totalDeductions,
+      netPay
+    );
+
+    const fileName = `Payslip_${(employeeDetails?.name || "Employee").replace(/\s+/g, "_")}_${(month || "").replace(/\s+/g, "_")}.pdf`;
+    await downloadPayslipPdf(viewModel, fileName);
+  };
+
   const now = new Date();
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
@@ -641,6 +689,10 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
           <span className="att-quick-icon green"><FiUser /></span>
           <span className="att-quick-label">My Profile</span>
         </button>
+        <button type="button" className="att-quick-btn" onClick={openPayslipsModal}>
+          <span className="att-quick-icon teal"><FiDownload /></span>
+          <span className="att-quick-label">My Payslips</span>
+        </button>
         <button type="button" className="att-quick-btn" onClick={() => setShowCalendarModal(true)}>
           <span className="att-quick-icon blue"><FiCalendar /></span>
           <span className="att-quick-label">Calendar View</span>
@@ -650,6 +702,46 @@ const remainingWorkingDays = Math.max(0, totalWorkingDays - presentDays);
           <span className="att-quick-label">Logout</span>
         </button>
       </div>
+
+      {showPayslipsModal && (
+        <div className="att-modal-backdrop">
+          <div className="att-modal att-payslips-modal">
+            <button
+              type="button"
+              className="att-modal-close"
+              onClick={() => setShowPayslipsModal(false)}
+            >
+              <FiX />
+            </button>
+            <h2 className="att-payslips-title">My Payslips</h2>
+            <div className="att-payslips-list">
+              {payslipsLoading ? (
+                <div className="att-payslips-empty">Loading payslips...</div>
+              ) : payslips.length === 0 ? (
+                <div className="att-payslips-empty">No payslips found</div>
+              ) : (
+                payslips.map((payslip) => (
+                  <div key={payslip._id} className="att-payslips-row">
+                    <div>
+                      <div className="att-payslips-month">{payslip.month}</div>
+                      <div className="att-payslips-net">
+                        Net Pay: ₹{Number(payslip.netPay || 0).toFixed(2)}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="att-payslips-download"
+                      onClick={() => downloadPayslip(payslip)}
+                    >
+                      Download
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCalendarModal && (
         <div className="att-modal-backdrop">

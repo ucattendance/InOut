@@ -71,6 +71,10 @@ export const buildUserUpdatePayload = (form) => {
     skipAttendanceReminders: synced.skipAttendanceReminders === true,
     adminComments: synced.adminComments || '',
     employeeId: synced.employeeId || '',
+    empGrade: synced.empGrade || '',
+    pan: synced.pan || '',
+    uan: synced.uan || '',
+    esiNumber: synced.esiNumber || '',
   };
 };
 

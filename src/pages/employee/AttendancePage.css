@@ -217,8 +217,8 @@
 /* Quick actions */
 .att-quick {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.55rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.45rem;
   margin-bottom: 1.35rem;
 }
 
@@ -255,12 +255,81 @@
 .att-quick-icon.orange { background: #fff7ed; color: #ea580c; }
 .att-quick-icon.green { background: #dcfce7; color: #16a34a; }
 .att-quick-icon.blue { background: #e6f5f3; color: #159c8e; }
+.att-quick-icon.teal { background: #e6f5f3; color: #0f7a6e; }
 .att-quick-icon.red { background: #fee2e2; color: #dc2626; }
 
 .dark .att-quick-icon.orange { background: #7c2d12; color: #fdba74; }
 .dark .att-quick-icon.green { background: #064e3b; color: #86efac; }
 .dark .att-quick-icon.blue { background: #0b3d38; color: #5eead4; }
+.dark .att-quick-icon.teal { background: #0b3d38; color: #5eead4; }
 .dark .att-quick-icon.red { background: #7f1d1d; color: #fca5a5; }
+
+.att-payslips-modal {
+  max-width: 420px;
+  width: calc(100% - 2rem);
+}
+
+.att-payslips-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #159c8e;
+}
+
+.att-payslips-list {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.att-payslips-empty {
+  color: #6b7280;
+  font-style: italic;
+  padding: 0.75rem 0;
+}
+
+.att-payslips-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.dark .att-payslips-row {
+  border-bottom-color: #374151;
+}
+
+.att-payslips-month {
+  font-weight: 700;
+  color: var(--att-text);
+}
+
+.att-payslips-net {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 0.15rem;
+}
+
+.dark .att-payslips-net {
+  color: #9ca3af;
+}
+
+.att-payslips-download {
+  border: none;
+  border-radius: 999px;
+  background: #159c8e;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.att-payslips-download:hover {
+  background: #0f7a6e;
+}
 
 .att-quick-label {
   font-size: 0.65rem;

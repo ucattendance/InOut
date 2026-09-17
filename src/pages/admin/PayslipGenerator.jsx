@@ -22,8 +22,101 @@ import axios from "axios";
 import uclogo from "../../assets/logo.png";
 import jzlogo from "../../assets/jzlogo.png";
 import { API_ENDPOINTS } from "../../utils/api";
-  import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Loader from "../../components/admin-dashboard/common/Loader";
+import { localDateYMD } from "../../utils/localDate";
+import {
+  enrichLogNames,
+  getLogTimestamp,
+  normalizeLogs,
+} from "../../utils/dashboardLogs";
+import {
+  annualToMonthlySalary,
+  calculateLopDays,
+  calculatePaidGrossPay,
+} from "../../utils/payslipViewModel";
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const normalizeName = (name) => (name || "").trim().toLowerCase();
+
+const normalizeWeeklySchedule = (ws) => {
+  if (!ws || typeof ws !== "object") return {};
+  const dayMap = {
+    sun: "Sunday", sunday: "Sunday",
+    mon: "Monday", monday: "Monday",
+    tue: "Tuesday", tues: "Tuesday", tuesday: "Tuesday",
+    wed: "Wednesday", wednesday: "Wednesday",
+    thu: "Thursday", thur: "Thursday", thurs: "Thursday", thursday: "Thursday",
+    fri: "Friday", friday: "Friday",
+    sat: "Saturday", saturday: "Saturday",
+  };
+  const out = {};
+  Object.entries(ws).forEach(([day, val]) => {
+    const lower = String(day).trim().toLowerCase();
+    const full = dayMap[lower] || (day.charAt(0).toUpperCase() + day.slice(1).toLowerCase());
+    if (WEEKDAYS.includes(full)) out[full] = val;
+  });
+  return out;
+};
+
+const getDayName = (date) => date.toLocaleDateString("en-US", { weekday: "long" });
+
+const isScheduledWorkDay = (dateObj, weeklySchedule, isHolidayDate) => {
+  if (isHolidayDate || dateObj.getDay() === 0) return false;
+  if (dateObj.getDay() === 6) return true;
+  const norm = normalizeWeeklySchedule(weeklySchedule);
+  if (Object.keys(norm).length === 0) return true;
+  const daySchedule = norm[getDayName(dateObj)];
+  if (daySchedule === undefined) return false;
+  return !daySchedule.isLeave;
+};
+
+const isOfficeLeaveDay = (dateObj, scheduled) =>
+  dateObj.getDay() === 0 || (dateObj.getDay() !== 6 && !!scheduled?.isLeave);
+
+const eachDateInRange = (from, to) => {
+  const dates = [];
+  const start = new Date(from);
+  const end = new Date(to);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return dates;
+  const cur = new Date(start);
+  while (cur <= end) {
+    dates.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+};
+
+const normalizeHolidayList = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.holidays)) return data.holidays;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+};
+
+const fetchPayslipAttendanceLogs = async (headers, users) => {
+  try {
+    const res = await axios.get(
+      `${API_ENDPOINTS.getRecentDashboardLogs}?days=1095&_=${Date.now()}`,
+      { headers }
+    );
+    const rows = enrichLogNames(normalizeLogs(res.data), users);
+    if (rows.length > 0) return rows;
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const res = await axios.get(API_ENDPOINTS.getRecentAttendanceLogs, { headers });
+    return enrichLogNames(normalizeLogs(res.data), users);
+  } catch {
+    return [];
+  }
+};
+
 const PayslipGenerator = () => {
   const [companyLogo, setCompanyLogo] = useState(uclogo);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date());
@@ -31,6 +124,9 @@ const PayslipGenerator = () => {
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [logs, setLogs] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [leaves, setLeaves] = useState([]);
+  const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewMode, setPreviewMode] = useState(false);
   
@@ -53,6 +149,7 @@ const PayslipGenerator = () => {
     lateDays: 0,
     halfDays: 0,
     absentDays: 0,
+    lopDays: 0,
     totalDays: 0,
     presentDays: 0,
     empGrade: "",
@@ -81,21 +178,58 @@ const PayslipGenerator = () => {
     { label: "TDS", amount: 1500 },
   ]);
 
+  const findEmployeeProfile = (employeeName, sampleLog) => {
+    if (!employeeName || !Array.isArray(users) || users.length === 0) return null;
+    const userId = sampleLog?.userId ?? sampleLog?.user?._id ?? sampleLog?.user?.id;
+    if (userId != null) {
+      const byId = users.find((u) => String(u._id) === String(userId));
+      if (byId) return byId;
+    }
+    const target = String(employeeName).trim().toLowerCase();
+    return (
+      users.find((u) => String(u.name || "").trim().toLowerCase() === target) || null
+    );
+  };
+
+  const profileField = (value) => {
+    if (value == null) return "";
+    const text = String(value).trim();
+    return text;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
       try {
-        const [logsRes, schedulesRes] = await Promise.all([
-          axios.get(API_ENDPOINTS.getRecentAttendanceLogs, { headers }),
+        const [schedulesRes, usersRes, leavesRes, holidaysRes] = await Promise.all([
           axios.get(API_ENDPOINTS.getSchedules, { headers }),
+          axios
+            .get(`${API_ENDPOINTS.getUsers}?_=${Date.now()}`, { headers })
+            .catch((err) => {
+              console.error("Error loading users for payslip autofill:", err);
+              return { data: [] };
+            }),
+          axios.get(API_ENDPOINTS.getAllLeaves, { headers }).catch(() => ({ data: [] })),
+          axios.get(API_ENDPOINTS.getHolidays, { headers }).catch(() => ({ data: [] })),
         ]);
-        setLogs(logsRes.data);
-        setSchedules(schedulesRes.data);
-        const names = [...new Set(logsRes.data.map((log) => log.employeeName || "Unknown"))];
-        setEmployees(names);
-       
+        const usersData = Array.isArray(usersRes.data) ? usersRes.data : [];
+        const logsData = await fetchPayslipAttendanceLogs(headers, usersData);
 
+        setLogs(logsData);
+        setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
+        setUsers(usersData);
+        setLeaves(Array.isArray(leavesRes.data) ? leavesRes.data : []);
+        setHolidays(normalizeHolidayList(holidaysRes.data));
+
+        const names = [
+          ...new Set(
+            logsData
+              .map((log) => log.employeeName || log.user?.name || "Unknown")
+              .filter((n) => n && n !== "Unknown")
+          ),
+        ];
+        setEmployees(names);
       } catch (err) {
         console.error("Error loading payslip data:", err);
       } finally {
@@ -106,7 +240,7 @@ const PayslipGenerator = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedEmployee) return;
+    if (!selectedEmployee || loading) return;
 
     const year = selectedMonth.getFullYear();
     const month = selectedMonth.getMonth();
@@ -115,99 +249,165 @@ const PayslipGenerator = () => {
       (_, i) => new Date(year, month, i + 1)
     );
 
+    const empKey = normalizeName(selectedEmployee);
+    const holidayKeys = new Set(
+      holidays
+        .map((h) => localDateYMD(h.date))
+        .filter((key) => {
+          if (!key) return false;
+          const d = new Date(`${key}T00:00:00`);
+          return d.getFullYear() === year && d.getMonth() === month;
+        })
+    );
+    const isHolidayDate = (dateObj) => holidayKeys.has(localDateYMD(dateObj));
+
+    const isOnApprovedLeave = (dateObj) => {
+      const key = localDateYMD(dateObj);
+      return leaves.some((leave) => {
+        const name = leave.user?.name || leave.employeeName;
+        if (normalizeName(name) !== empKey) return false;
+        if ((leave.status || "").toLowerCase() !== "approved") return false;
+        return eachDateInRange(leave.fromDate, leave.toDate).some(
+          (d) => localDateYMD(d) === key
+        );
+      });
+    };
+
     const filteredLogs = logs.filter((log) => {
-      const date = new Date(log.timestamp);
+      const ts = getLogTimestamp(log);
+      if (!ts) return false;
+      const logName = log.employeeName || log.user?.name || "";
       return (
-        log.employeeName === selectedEmployee &&
-        date.getFullYear() === year &&
-        date.getMonth() === month
+        normalizeName(logName) === empKey &&
+        ts.getFullYear() === year &&
+        ts.getMonth() === month
       );
     });
 
     const grouped = {};
     filteredLogs.forEach((log) => {
-      const dateKey = new Date(log.timestamp).toDateString();
+      const ts = getLogTimestamp(log);
+      if (!ts) return;
+      const dateKey = ts.toDateString();
       if (!grouped[dateKey]) grouped[dateKey] = { checkIn: null, checkOut: null };
       if (log.type === "check-in") grouped[dateKey].checkIn = log;
       if (log.type === "check-out") grouped[dateKey].checkOut = log;
     });
 
-    const userSchedule = schedules.find((sch) => sch.user?.name === selectedEmployee);
-    const weeklySchedule = userSchedule?.weeklySchedule || {};
+    const userSchedule = schedules.find(
+      (sch) => normalizeName(sch.user?.name) === empKey
+    );
+    const weeklySchedule = normalizeWeeklySchedule(userSchedule?.weeklySchedule || {});
 
     let workingDays = 0;
     let leaveDays = 0;
     let lateDays = 0;
     let presentDays = 0;
     let halfDays = 0;
+    let absentDays = 0;
 
     const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
     allDates.forEach((date) => {
       if (date > today) return;
 
       const dateKey = date.toDateString();
-      const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
+      const dayName = getDayName(date);
       const scheduled = weeklySchedule[dayName];
+      const holiday = isHolidayDate(date);
+      const workDay = isScheduledWorkDay(date, weeklySchedule, holiday);
+      const onLeave = isOnApprovedLeave(date);
+      const attendance = grouped[dateKey];
 
-      if (!scheduled || date.getDay() === 0) {
-        return;
-      }
-      if (scheduled.isLeave && date.getDay() !== 6) {
+      if (holiday) return;
+
+      if (onLeave) {
         leaveDays++;
         return;
       }
 
-      workingDays++;
+      if (isOfficeLeaveDay(date, scheduled)) return;
 
-      const attendance = grouped[dateKey];
+      if (workDay) workingDays++;
+
       if (attendance?.checkIn) {
         presentDays++;
 
         if (scheduled?.start) {
           const [h, m] = scheduled.start.split(":").map(Number);
           const expected = new Date(date);
-          expected.setHours(h, m+10, 0);
-          const actual = new Date(attendance.checkIn.timestamp);
-
+          expected.setHours(h, m + 10, 0, 0);
+          const actual =
+            getLogTimestamp(attendance.checkIn) ||
+            new Date(attendance.checkIn.timestamp);
           const diffMinutes = (actual - expected) / 60000;
-          
-          if (diffMinutes >= 60) halfDays++; // mark half day if 1 hour late
+
+          if (diffMinutes >= 60) halfDays++;
           else if (diffMinutes > 0) lateDays++;
         }
+      } else if (workDay) {
+        absentDays++;
       }
     });
 
-    const absentDays = workingDays - presentDays;
-    const sampleLog = logs.find((l) => l.employeeName === selectedEmployee);
-     console.log("sampleLog doj", sampleLog?.dateOfJoining);
-console.log("formatted  doj", sampleLog?.dateOfJoining ? dayjs(sampleLog.dateOfJoining).format("YYYY-MM-DD") : "");
-    
+    const sampleLog = logs.find(
+      (l) => normalizeName(l.employeeName || l.user?.name) === empKey
+    );
+    const profile = findEmployeeProfile(selectedEmployee, sampleLog);
+
+    const annualSalary = Number(profile?.salary) || 0;
+    const monthlySalary = annualToMonthlySalary(annualSalary);
+
     setEmployeeDetails((prev) => ({
       ...prev,
       name: selectedEmployee,
-      userId:sampleLog?.userId,
-      employeeId:  sampleLog?._id || "uc_202501",
-      designation: sampleLog?.position || "Software Engineer",
-      department: sampleLog?.department || "Development",
-      company: sampleLog?.company || "",
+      userId: sampleLog?.userId || profile?._id,
+      employeeId: profile?.employeeId || sampleLog?._id || "uc_202501",
+      designation: profile?.position || sampleLog?.position || "Software Engineer",
+      department: profile?.department || sampleLog?.department || "Development",
+      company: profile?.company || sampleLog?.company || "",
       month: dayjs(selectedMonth).format("MMMM YYYY"),
       totalDays: allDates.length,
-      bankAccountName: sampleLog?.bankDetails?.bankingName,
-      bankAccountNumber: sampleLog?.bankDetails?.accountNumber,
-      ifsc: sampleLog?.bankDetails?.ifscCode || prev.ifsc,
-      mobile: sampleLog?.phone || prev.mobile,
-      dateOfJoining: sampleLog?.dateOfJoining
-    ? dayjs(sampleLog.dateOfJoining).format("YYYY-MM-DD")
-    : "",
+      bankAccountName:
+        profile?.bankDetails?.bankingName || sampleLog?.bankDetails?.bankingName || "",
+      bankAccountNumber:
+        profile?.bankDetails?.bankAccountNumber ||
+        sampleLog?.bankDetails?.bankAccountNumber ||
+        sampleLog?.bankDetails?.accountNumber ||
+        "",
+      empGrade: profileField(profile?.empGrade),
+      pan: profileField(profile?.pan),
+      uan: profileField(profile?.uan),
+      esiNumber: profileField(profile?.esiNumber),
+      ifsc: profileField(
+        profile?.bankDetails?.ifscCode || sampleLog?.bankDetails?.ifscCode
+      ),
+      mobile: profile?.phone || sampleLog?.phone || "",
+      dateOfJoining: (profile?.dateOfJoining || sampleLog?.dateOfJoining)
+        ? dayjs(profile?.dateOfJoining || sampleLog?.dateOfJoining).format("YYYY-MM-DD")
+        : "",
+      // Annual CTC from profile; monthly gross comes from income rows / calculation
+      ctc: annualSalary > 0 ? String(annualSalary) : "",
+      grossPay: "",
+      paidGrossPay: "",
       workingDays,
       leaveDays,
       lateDays,
       halfDays,
       absentDays,
+      lopDays: calculateLopDays(leaveDays, absentDays),
       presentDays,
     }));
-    console.log("Employee Details:", employeeDetails);
-  }, [selectedEmployee, selectedMonth, logs, schedules]);
+
+    if (annualSalary > 0) {
+      setIncomes([{ label: "Basic Pay", amount: monthlySalary }]);
+    } else {
+      setIncomes([{ label: "Basic Pay", amount: 0 }]);
+    }
+    // Autofill only on employee/month change or after initial load so manual edits stick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEmployee, selectedMonth, loading]);
 
 
 const theme = createTheme({
@@ -215,28 +415,6 @@ const theme = createTheme({
     fontFamily: 'Montserrat, sans-serif',
   },
 });
-  useEffect(() => {
-    if (!selectedEmployee) return;
-
-    const sampleLog = logs.find((l) => l.employeeName === selectedEmployee);
-    const company = sampleLog?.company?.toLowerCase() || "";
-
-   
-
-    // Update employee details
-    setEmployeeDetails(prev => ({
-      ...prev,
-      name: selectedEmployee,
-      userId:sampleLog?.userId,
-      employeeId: sampleLog?._id || "uc_202501",
-      designation: sampleLog?.position || "Software Engineer",
-      department: sampleLog?.department || "Development",
-      company: sampleLog?.company || "",
-      dateOfJoining: sampleLog?.dateOfJoining
-    ? dayjs(sampleLog.dateOfJoining).format("YYYY-MM-DD")
-    : "",
-    }));
-  }, [selectedEmployee, logs]);
 
   const handleChange = (section, index, field, value) => {
     const updater = section === "income" ? [...incomes] : [...deductions];
@@ -263,7 +441,21 @@ const theme = createTheme({
 
   const totalIncome = incomes.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
   const totalDeductions = deductions.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-  const netPay = totalIncome - totalDeductions;
+  const daysInMonth = Number(employeeDetails.totalDays) || 0;
+  const lopDays =
+    employeeDetails.lopDays !== "" && employeeDetails.lopDays !== undefined
+      ? Number(employeeDetails.lopDays) || 0
+      : calculateLopDays(employeeDetails.leaveDays, employeeDetails.absentDays);
+  const paidGrossPay = calculatePaidGrossPay(totalIncome, daysInMonth, lopDays);
+  const netPay = Math.round((paidGrossPay - totalDeductions) * 100) / 100;
+
+  const handleAttendanceChange = (key, value) => {
+    const next = { ...employeeDetails, [key]: value };
+    if (key === "leaveDays" || key === "absentDays") {
+      next.lopDays = calculateLopDays(next.leaveDays, next.absentDays);
+    }
+    setEmployeeDetails(next);
+  };
 
   if (loading) {
     return (
@@ -478,14 +670,26 @@ const theme = createTheme({
             Attendance Summary
           </Typography>
           <Grid container spacing={2}>
-            {["totalDays", "workingDays", "presentDays", "leaveDays", "lateDays", "halfDays", "absentDays"].map((key) => (
+            {[
+              "totalDays",
+              "workingDays",
+              "presentDays",
+              "leaveDays",
+              "lateDays",
+              "halfDays",
+              "absentDays",
+              "lopDays",
+            ].map((key) => (
               <Grid item xs={6} sm={3} key={key}>
                 <TextField
                   fullWidth
-                  label={key.replace(/([A-Z])/g, " $1")}
+                  label={key === "lopDays" ? "LOP Days" : key.replace(/([A-Z])/g, " $1")}
                   value={employeeDetails[key]}
-                  onChange={(e) =>
-                    setEmployeeDetails({ ...employeeDetails, [key]: e.target.value })
+                  onChange={(e) => handleAttendanceChange(key, e.target.value)}
+                  helperText={
+                    key === "lopDays"
+                      ? "Only days above 2 (leave + absent)"
+                      : undefined
                   }
                 />
               </Grid>

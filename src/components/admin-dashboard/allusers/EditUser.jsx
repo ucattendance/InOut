@@ -32,6 +32,10 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
     branch: '',
     linkedin: '',
     github: '',
+    empGrade: '',
+    pan: '',
+    uan: '',
+    esiNumber: '',
     bankDetails: {
       bankingName: '',
       bankAccountNumber: '',
@@ -382,6 +386,28 @@ const EditUser = ({ userId, onClose, onUpdated, pageMode = false }) => {
                 placeholder="Internal notes / comments"
                 rows={4}
               />
+            </div>
+          </div>
+
+          <div className="uc-form-section">
+            <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>Statutory Details</h3>
+            <div className="uc-form-grid-3">
+              <div className="uc-form-field" style={{ marginBottom: 0 }}>
+                <label>Emp Grade</label>
+                <input type="text" name="empGrade" value={form.empGrade || ''} onChange={handleChange} placeholder="Emp Grade" />
+              </div>
+              <div className="uc-form-field" style={{ marginBottom: 0 }}>
+                <label>PAN</label>
+                <input type="text" name="pan" value={form.pan || ''} onChange={handleChange} placeholder="PAN" />
+              </div>
+              <div className="uc-form-field" style={{ marginBottom: 0 }}>
+                <label>PF-UAN</label>
+                <input type="text" name="uan" value={form.uan || ''} onChange={handleChange} placeholder="UAN" />
+              </div>
+            </div>
+            <div className="uc-form-field">
+              <label>ESI Number</label>
+              <input type="text" name="esiNumber" value={form.esiNumber || ''} onChange={handleChange} placeholder="ESI Number" />
             </div>
           </div>
 

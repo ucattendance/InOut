@@ -3,6 +3,48 @@ import { rupeesInWords } from "./numberToWords";
 
 const DEFAULT_COMPANY_NAME = "Urbancode Edutech Solutions Pvt Ltd";
 
+/** Company policy: up to this many leave days per month are paid; excess is LOP. */
+export const ALLOWED_LEAVE_DAYS_PER_MONTH = 2;
+
+/**
+ * Company policy: 2 days per month are allowed (leave + absent combined).
+ * Only the excess becomes LOP.
+ *
+ * Examples:
+ * - leave=2, absent=0 → LOP 0
+ * - leave=4, absent=0 → LOP 2
+ * - leave=0, absent=1 → LOP 0
+ * - leave=0, absent=3 → LOP 1
+ */
+export function calculateLopDays(leaveDays = 0, absentDays = 0) {
+  const leave = Number(leaveDays) || 0;
+  const absent = Number(absentDays) || 0;
+  return Math.max(0, leave + absent - ALLOWED_LEAVE_DAYS_PER_MONTH);
+}
+
+/** Profile salary is annual (/year) → monthly gross for the payslip. */
+export function annualToMonthlySalary(annualSalary = 0) {
+  const annual = Number(annualSalary) || 0;
+  return Math.round((annual / 12) * 100) / 100;
+}
+
+/** Per-day rate from monthly gross and calendar days in the month. */
+export function perDaySalary(monthlySalary = 0, daysInMonth = 0) {
+  const monthly = Number(monthlySalary) || 0;
+  const days = Number(daysInMonth) || 0;
+  if (days <= 0) return 0;
+  return monthly / days;
+}
+
+/** Monthly gross minus LOP (per-day × LOP days). */
+export function calculatePaidGrossPay(monthlySalary = 0, daysInMonth = 0, lopDays = 0) {
+  const days = Number(daysInMonth) || 0;
+  const monthly = Number(monthlySalary) || 0;
+  if (days <= 0) return monthly;
+  const paidDays = Math.max(days - (Number(lopDays) || 0), 0);
+  return Math.round(perDaySalary(monthly, days) * paidDays * 100) / 100;
+}
+
 const COMPANY_INFO = {
   "urbancode edutech solutions pvt ltd": {
     cin: "U46512TN2025PTC175901",
@@ -33,7 +75,7 @@ function payPeriodLabel(monthLabel) {
   return `${start.format("DD-MMM-YYYY").toUpperCase()} to ${end.format("DD-MMM-YYYY").toUpperCase()}`;
 }
 
-export function buildPayslipViewModel(employeeDetails = {}, incomes = [], deductions = [], totalIncome = 0, totalDeductions = 0, netPay = 0) {
+export function buildPayslipViewModel(employeeDetails = {}, incomes = [], deductions = [], totalIncome = 0, totalDeductions = 0, _netPay = 0) {
   const earnings = normalizeItems(incomes);
   const deds = normalizeItems(deductions);
 
@@ -44,10 +86,13 @@ export function buildPayslipViewModel(employeeDetails = {}, incomes = [], deduct
   const companyInfo = COMPANY_INFO[companyName.toLowerCase()] || {};
 
   const daysInMonth = Number(employeeDetails.totalDays || 0);
-  const lopDays = Number(employeeDetails.absentDays || 0);
+  const lopDays =
+    employeeDetails.lopDays !== "" && employeeDetails.lopDays !== undefined && employeeDetails.lopDays !== null
+      ? Number(employeeDetails.lopDays) || 0
+      : calculateLopDays(employeeDetails.leaveDays, employeeDetails.absentDays);
   const paidDays = Math.max(daysInMonth - lopDays, 0);
   const calculatedGrossPay = Number(totalIncome || 0);
-  const calculatedPaidGrossPay = daysInMonth > 0 ? (calculatedGrossPay / daysInMonth) * paidDays : calculatedGrossPay;
+  const calculatedPaidGrossPay = calculatePaidGrossPay(calculatedGrossPay, daysInMonth, lopDays);
 
   const grossPay = employeeDetails.grossPay !== "" && employeeDetails.grossPay !== undefined
     ? Number(employeeDetails.grossPay)
@@ -58,7 +103,8 @@ export function buildPayslipViewModel(employeeDetails = {}, incomes = [], deduct
     : calculatedPaidGrossPay;
 
   const monthLabel = employeeDetails.month || "";
-  const netPayNum = Number(netPay || 0);
+  // Net = paid gross (after LOP) minus deductions
+  const netPayNum = Math.round((Number(paidGrossPay) - Number(totalDeductions || 0)) * 100) / 100;
 
   return {
     companyName,

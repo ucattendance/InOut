@@ -31,6 +31,7 @@ const PayslipDownloader = ({ employeeDetails, incomes, deductions, totalIncome, 
           leaveDays: employeeDetails?.leaveDays || 0,
           lateDays: employeeDetails?.lateDays || 0,
           halfDays: employeeDetails?.halfDays || 0,
+          lopDays: employeeDetails?.lopDays || 0,
         },
 
         incomes:
