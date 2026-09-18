@@ -354,56 +354,81 @@ const PayslipGenerator = () => {
     const sampleLog = logs.find(
       (l) => normalizeName(l.employeeName || l.user?.name) === empKey
     );
-    const profile = findEmployeeProfile(selectedEmployee, sampleLog);
+    let profile = findEmployeeProfile(selectedEmployee, sampleLog);
+    const resolvedUserId = sampleLog?.userId || sampleLog?.user?._id || profile?._id;
 
-    const annualSalary = Number(profile?.salary) || 0;
-    const monthlySalary = annualToMonthlySalary(annualSalary);
+    const applyProfileToForm = (resolvedProfile) => {
+      const annualSalary = Number(resolvedProfile?.salary) || 0;
+      const monthlySalary = annualToMonthlySalary(annualSalary);
 
-    setEmployeeDetails((prev) => ({
-      ...prev,
-      name: selectedEmployee,
-      userId: sampleLog?.userId || profile?._id,
-      employeeId: profile?.employeeId || sampleLog?._id || "uc_202501",
-      designation: profile?.position || sampleLog?.position || "Software Engineer",
-      department: profile?.department || sampleLog?.department || "Development",
-      company: profile?.company || sampleLog?.company || "",
-      month: dayjs(selectedMonth).format("MMMM YYYY"),
-      totalDays: allDates.length,
-      bankAccountName:
-        profile?.bankDetails?.bankingName || sampleLog?.bankDetails?.bankingName || "",
-      bankAccountNumber:
-        profile?.bankDetails?.bankAccountNumber ||
-        sampleLog?.bankDetails?.bankAccountNumber ||
-        sampleLog?.bankDetails?.accountNumber ||
-        "",
-      empGrade: profileField(profile?.empGrade),
-      pan: profileField(profile?.pan),
-      uan: profileField(profile?.uan),
-      esiNumber: profileField(profile?.esiNumber),
-      ifsc: profileField(
-        profile?.bankDetails?.ifscCode || sampleLog?.bankDetails?.ifscCode
-      ),
-      mobile: profile?.phone || sampleLog?.phone || "",
-      dateOfJoining: (profile?.dateOfJoining || sampleLog?.dateOfJoining)
-        ? dayjs(profile?.dateOfJoining || sampleLog?.dateOfJoining).format("YYYY-MM-DD")
-        : "",
-      // Annual CTC from profile; monthly gross comes from income rows / calculation
-      ctc: annualSalary > 0 ? String(annualSalary) : "",
-      grossPay: "",
-      paidGrossPay: "",
-      workingDays,
-      leaveDays,
-      lateDays,
-      halfDays,
-      absentDays,
-      lopDays: calculateLopDays(leaveDays, absentDays),
-      presentDays,
-    }));
+      setEmployeeDetails((prev) => ({
+        ...prev,
+        name: selectedEmployee,
+        userId: resolvedUserId || resolvedProfile?._id,
+        employeeId: resolvedProfile?.employeeId || sampleLog?._id || "uc_202501",
+        designation: resolvedProfile?.position || sampleLog?.position || "Software Engineer",
+        department: resolvedProfile?.department || sampleLog?.department || "Development",
+        company: resolvedProfile?.company || sampleLog?.company || "",
+        month: dayjs(selectedMonth).format("MMMM YYYY"),
+        totalDays: allDates.length,
+        bankAccountName:
+          resolvedProfile?.bankDetails?.bankingName ||
+          sampleLog?.bankDetails?.bankingName ||
+          "",
+        bankAccountNumber:
+          resolvedProfile?.bankDetails?.bankAccountNumber ||
+          sampleLog?.bankDetails?.bankAccountNumber ||
+          sampleLog?.bankDetails?.accountNumber ||
+          "",
+        empGrade: profileField(resolvedProfile?.empGrade),
+        pan: profileField(resolvedProfile?.pan),
+        uan: profileField(resolvedProfile?.uan),
+        esiNumber: profileField(resolvedProfile?.esiNumber),
+        ifsc: profileField(
+          resolvedProfile?.bankDetails?.ifscCode || sampleLog?.bankDetails?.ifscCode
+        ),
+        mobile: resolvedProfile?.phone || sampleLog?.phone || "",
+        dateOfJoining: (resolvedProfile?.dateOfJoining || sampleLog?.dateOfJoining)
+          ? dayjs(resolvedProfile?.dateOfJoining || sampleLog?.dateOfJoining).format(
+              "YYYY-MM-DD"
+            )
+          : "",
+        ctc: annualSalary > 0 ? String(annualSalary) : "",
+        grossPay: "",
+        paidGrossPay: "",
+        workingDays,
+        leaveDays,
+        lateDays,
+        halfDays,
+        absentDays,
+        lopDays: calculateLopDays(leaveDays, absentDays),
+        presentDays,
+      }));
 
-    if (annualSalary > 0) {
-      setIncomes([{ label: "Basic Pay", amount: monthlySalary }]);
-    } else {
-      setIncomes([{ label: "Basic Pay", amount: 0 }]);
+      if (annualSalary > 0) {
+        setIncomes([{ label: "Basic Pay", amount: monthlySalary }]);
+      } else {
+        setIncomes([{ label: "Basic Pay", amount: 0 }]);
+      }
+    };
+
+    // Fill immediately from list, then refresh full profile by id (empGrade/PAN/etc.).
+    applyProfileToForm(profile);
+
+    if (resolvedUserId) {
+      const token = localStorage.getItem("token");
+      axios
+        .get(API_ENDPOINTS.getUserById(resolvedUserId), {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then(({ data }) => {
+          if (data && typeof data === "object") {
+            applyProfileToForm(data);
+          }
+        })
+        .catch((err) => {
+          console.error("Error loading full employee profile for payslip:", err);
+        });
     }
     // Autofill only on employee/month change or after initial load so manual edits stick.
     // eslint-disable-next-line react-hooks/exhaustive-deps

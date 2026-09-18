@@ -28,6 +28,10 @@ export default function ProfileCard() {
   dateOfBirth: "",
     linkedin: "",
     github: "",
+    empGrade: "",
+    pan: "",
+    uan: "",
+    esiNumber: "",
     rolesAndResponsibility: [],
     skills: [],
     bankDetails: {
@@ -76,6 +80,10 @@ export default function ProfileCard() {
           dateOfBirth: data.dateOfBirth || "",
           linkedin: data.linkedin || "",
           github: data.github || "",
+          empGrade: data.empGrade || "",
+          pan: data.pan || "",
+          uan: data.uan || "",
+          esiNumber: data.esiNumber || "",
           rolesAndResponsibility: Array.isArray(data.rolesAndResponsibility) ? data.rolesAndResponsibility : [],
           skills: Array.isArray(data.skills) ? data.skills : [],
           bankDetails: {
@@ -686,6 +694,67 @@ export default function ProfileCard() {
                   />
                 ) : (
                   <span>{profile.bankDetails.upiId}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Statutory Details Card */}
+          <div className="card">
+            <div className="card-header">
+              <h3>Statutory Details</h3>
+            </div>
+            <div className="banking-info">
+              <div className="info-row">
+                Emp Grade:
+                {(editing === 'statutory' || isEditingAll) ? (
+                  <input
+                    type="text"
+                    value={profile.empGrade}
+                    onChange={(e) => handleInputChange('empGrade', e.target.value)}
+                    className="edit-input"
+                  />
+                ) : (
+                  <span>{profile.empGrade || 'Not set'}</span>
+                )}
+              </div>
+              <div className="info-row">
+                PAN:
+                {(editing === 'statutory' || isEditingAll) ? (
+                  <input
+                    type="text"
+                    value={profile.pan}
+                    onChange={(e) => handleInputChange('pan', e.target.value)}
+                    className="edit-input"
+                  />
+                ) : (
+                  <span>{profile.pan || 'Not set'}</span>
+                )}
+              </div>
+              <div className="info-row">
+                PF-UAN:
+                {(editing === 'statutory' || isEditingAll) ? (
+                  <input
+                    type="text"
+                    value={profile.uan}
+                    onChange={(e) => handleInputChange('uan', e.target.value)}
+                    className="edit-input"
+                  />
+                ) : (
+                  <span>{profile.uan || 'Not set'}</span>
+                )}
+              </div>
+              <div className="info-row">
+                ESI Number:
+                {(editing === 'statutory' || isEditingAll) ? (
+                  <input
+                    type="text"
+                    value={profile.esiNumber}
+                    onChange={(e) => handleInputChange('esiNumber', e.target.value)}
+                    className="edit-input"
+                  />
+                ) : (
+                  <span>{profile.esiNumber || 'Not set'}</span>
                 )}
               </div>
             </div>
